@@ -6,6 +6,7 @@ import * as THREE from "three";
 import type { Player } from "@/lib/protocol";
 import type { Aim } from "./aim";
 import type { Shot } from "./logic";
+import { windStrength, type Wind } from "./wind";
 
 export const TARGET_Z = -9;
 export const TARGET_Y = 2.2;
@@ -49,6 +50,36 @@ function Arrow({
   );
 }
 
+function WindSock({ wind }: { wind: Wind }) {
+  const strength = windStrength(wind);
+  const length = 0.35 + strength * 1.15;
+  const blowingRight = wind.x >= 0;
+  // Lean the streamer for the gust's vertical share.
+  const lean = Math.atan2(wind.y, Math.abs(wind.x) || 0.001) * 0.6;
+  return (
+    <group position={[2.9, 0, TARGET_Z + 0.2]}>
+      <mesh position={[0, 1.4, 0]}>
+        <cylinderGeometry args={[0.04, 0.05, 2.8, 8]} />
+        <meshStandardMaterial color="#111111" />
+      </mesh>
+      <group
+        position={[0, 2.7, 0]}
+        rotation={[0, blowingRight ? 0 : Math.PI, blowingRight ? lean : -lean]}
+      >
+        <mesh position={[length / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.16, length, 12, 1, true]} />
+          <meshStandardMaterial
+            color={ACCENT}
+            side={THREE.DoubleSide}
+            transparent
+            opacity={0.85}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 export function Target({
   order,
   shots,
@@ -56,6 +87,7 @@ export function Target({
   liveAim,
   liveColor,
   roundId,
+  wind,
 }: {
   order: Player[];
   shots: Record<string, Shot[]>;
@@ -63,10 +95,15 @@ export function Target({
   liveAim: Aim | null;
   liveColor: string;
   roundId: number;
+  wind: Wind;
 }) {
   const flight = useRef<THREE.Group>(null);
   const crosshair = useRef<THREE.Group>(null);
-  const anim = useRef<{ startedAt: number; to: THREE.Vector3 } | null>(null);
+  const anim = useRef<{
+    startedAt: number;
+    to: THREE.Vector3;
+    aimed: THREE.Vector3;
+  } | null>(null);
   const point = useRef(new THREE.Vector3());
   const landed = useRef(new THREE.Vector3());
 
@@ -95,6 +132,7 @@ export function Target({
     anim.current = {
       startedAt: performance.now(),
       to: facePoint(lastShot.x, lastShot.y, new THREE.Vector3()),
+      aimed: facePoint(lastShot.aimX, lastShot.aimY, new THREE.Vector3()),
     };
   }, [lastShot, roundId]);
 
@@ -110,6 +148,11 @@ export function Target({
         } else {
           flight.current.visible = true;
           landed.current.copy(BOW_ORIGIN).lerp(state.to, t);
+          // The arrow leaves along the line of aim and is carried across to
+          // where it lands, so the wind is visible as a curve, not a jump.
+          const carry = (1 - t) * (1 - t);
+          landed.current.x += (state.aimed.x - state.to.x) * carry;
+          landed.current.y += (state.aimed.y - state.to.y) * carry;
           // a little lift early in the flight, gone by the time it lands
           landed.current.y += Math.sin(Math.PI * t) * 0.35 * (1 - t);
           flight.current.position.copy(landed.current);
@@ -131,6 +174,8 @@ export function Target({
 
   return (
     <group>
+      <WindSock wind={wind} />
+
       {/* stand */}
       <mesh position={[0, (TARGET_Y - TARGET_RADIUS) / 2, TARGET_Z - 0.1]}>
         <boxGeometry args={[0.16, TARGET_Y - TARGET_RADIUS, 0.16]} />

@@ -6,6 +6,7 @@ import type { CalibratedPose } from "@/lib/protocol";
 import { AIM, aimFromSample, scoreFromAim, useSteadyHold, type Aim } from "./aim";
 import { AimHint } from "./AimHint";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
+import { windLabel, type Wind } from "./wind";
 
 export function ArcheryPad({
   sendAction,
@@ -168,6 +169,7 @@ export function ArcheryPad({
           <p className="text-xs tracking-wide text-black/40">
             {(AIM.holdSeconds - hold).toFixed(1)}s · aiming at {preview || "a miss"}
           </p>
+          <WindTag wind={round.wind} accent={accent} />
         </>
       ) : (
         <>
@@ -182,6 +184,10 @@ export function ArcheryPad({
             Point the <span className="font-medium text-black">back</span> of the
             phone at the TV — screen facing you — then tap Ready. Tilt to aim and
             hold still for {AIM.holdSeconds} seconds to loose.
+          </p>
+          <WindTag wind={round.wind} accent={accent} />
+          <p className="text-center text-xs text-black/40">
+            The wind carries the arrow — aim into it.
           </p>
           <button
             type="button"
@@ -218,6 +224,34 @@ export function ArcheryPad({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function WindTag({ wind, accent }: { wind: Wind; accent: string }) {
+  const still = wind.speed < 0.02;
+  return (
+    <div className="flex items-center gap-2 text-xs tracking-wide text-black/55">
+      <span className="uppercase tracking-[0.22em] text-black/35">Wind</span>
+      {still ? null : (
+        <svg
+          width="24"
+          height="13"
+          viewBox="0 0 26 14"
+          aria-hidden="true"
+          style={{ transform: `rotate(${-wind.angleDeg}deg)` }}
+        >
+          <path
+            d="M1 7 h20 M16 2 l5 5 l-5 5"
+            fill="none"
+            stroke={accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      <span className="font-medium text-black">{windLabel(wind)}</span>
     </div>
   );
 }

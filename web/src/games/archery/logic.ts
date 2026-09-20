@@ -3,13 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalibratedPose, GameActionState, Player } from "@/lib/protocol";
 import { scoreFromAim } from "./aim";
+import { STILL_AIR, windFor, type Wind } from "./wind";
 
 export const ARROWS_PER_PLAYER = 3;
 
 export type Shot = {
   playerId: string;
+  /** Where the archer pointed. */
+  aimX: number;
+  aimY: number;
+  /** Where the arrow landed, once the wind had its say. */
   x: number;
   y: number;
+  wind: Wind;
   score: number;
   timestamp: number;
 };
@@ -20,6 +26,8 @@ export type RoundState = {
   shots: Record<string, Shot[]>;
   zeroByPlayer: Record<string, CalibratedPose>;
   current: Player | null;
+  /** The wind the archer who is up now has to shoot through. */
+  wind: Wind;
   arrowsLeft: number;
   done: boolean;
   ranking: { player: Player; total: number }[];
@@ -116,11 +124,20 @@ export function applyActions(
     if (!aim) continue;
     // Only the archer whose turn it is, and only while they have arrows left.
     if (nextUp(order, next.shots)?.id !== action.playerId) continue;
+    // The phone sends where it pointed, not where the arrow lands, so the wind
+    // is applied here — identically on the TV and on every phone.
+    const arrow = next.shots[action.playerId]?.length ?? 0;
+    const wind = windFor(next.roundId, action.playerId, arrow);
+    const x = aim.x + wind.x;
+    const y = aim.y + wind.y;
     const shot: Shot = {
       playerId: action.playerId,
-      x: aim.x,
-      y: aim.y,
-      score: scoreFromAim(aim.x, aim.y),
+      aimX: aim.x,
+      aimY: aim.y,
+      x,
+      y,
+      wind,
+      score: scoreFromAim(x, y),
       timestamp: action.timestamp,
     };
     const fired = [...(next.shots[action.playerId] ?? []), shot];
@@ -171,6 +188,13 @@ export function useRoundState(
   return useMemo(() => {
     const current = nextUp(order, progress.shots);
     const done = order.length > 0 && current === null;
+    const wind = current
+      ? windFor(
+          progress.roundId,
+          current.id,
+          progress.shots[current.id]?.length ?? 0,
+        )
+      : STILL_AIR;
     const ranking = order
       .map((player) => ({ player, total: totalFor(progress.shots[player.id]) }))
       .filter((entry) => (progress.shots[entry.player.id]?.length ?? 0) > 0)
@@ -181,6 +205,7 @@ export function useRoundState(
       shots: progress.shots,
       zeroByPlayer: progress.zeroByPlayer,
       current,
+      wind,
       arrowsLeft: current
         ? ARROWS_PER_PLAYER - (progress.shots[current.id]?.length ?? 0)
         : 0,

@@ -1,22 +1,32 @@
 "use client";
 
-import { Grid, PerspectiveCamera } from "@react-three/drei";
+import { Grid } from "@react-three/drei";
 import { useMemo, type ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { aimFromSample } from "./aim";
 import { AimHint } from "./AimHint";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
+import { RangeCamera } from "./RangeCamera";
 import { Target, TARGET_Z } from "./Target";
+import { windLabel, type Wind } from "./wind";
 
 const ACCENT = "#0057FF";
 
-function Stage({ children }: { children: ReactNode }) {
+function Stage({
+  drawing,
+  shotKey,
+  children,
+}: {
+  drawing: boolean;
+  shotKey: string;
+  children: ReactNode;
+}) {
   return (
     <>
       <color attach="background" args={["#f4f6fa"]} />
-      <fog attach="fog" args={["#f4f6fa", 14, 34]} />
-      <PerspectiveCamera makeDefault position={[0, 2.2, 1.2]} fov={40} />
+      <fog attach="fog" args={["#f4f6fa", 18, 42]} />
+      <RangeCamera drawing={drawing} shotKey={shotKey} />
       <ambientLight intensity={0.9} />
       <directionalLight position={[3, 7, 4]} intensity={1.05} />
       <pointLight position={[0, 4, TARGET_Z + 3]} intensity={9} color={ACCENT} distance={16} />
@@ -40,6 +50,34 @@ function Stage({ children }: { children: ReactNode }) {
   );
 }
 
+function WindTag({ wind }: { wind: Wind }) {
+  const still = wind.speed < 0.02;
+  return (
+    <div className="flex items-center gap-2 text-xs tracking-wide text-black/55">
+      <span className="uppercase tracking-[0.22em] text-black/35">Wind</span>
+      {still ? null : (
+        <svg
+          width="26"
+          height="14"
+          viewBox="0 0 26 14"
+          aria-hidden="true"
+          style={{ transform: `rotate(${-wind.angleDeg}deg)` }}
+        >
+          <path
+            d="M1 7 h20 M16 2 l5 5 l-5 5"
+            fill="none"
+            stroke={ACCENT}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      <span className="font-medium text-black">{windLabel(wind)}</span>
+    </div>
+  );
+}
+
 export function ArcheryScene({
   controllers,
   gyroByPlayer,
@@ -58,11 +96,16 @@ export function ArcheryScene({
     () => (zero && sample ? aimFromSample(sample, zero) : null),
     [zero, sample],
   );
+  // Changes once per arrow, which is what tells the camera to hold in close
+  // long enough to watch the shot land.
+  const shotKey = round.lastShot
+    ? `${round.lastShot.playerId}:${round.lastShot.timestamp}`
+    : "";
 
   return (
     <>
       <HostCanvas>
-        <Stage>
+        <Stage drawing={liveAim !== null} shotKey={shotKey}>
           <Target
             order={round.order}
             shots={round.shots}
@@ -70,6 +113,7 @@ export function ArcheryScene({
             liveAim={liveAim}
             liveColor={activeColor}
             roundId={round.roundId}
+            wind={round.wind}
           />
         </Stage>
       </HostCanvas>
@@ -122,6 +166,7 @@ export function ArcheryScene({
               <p className="text-sm text-black/55">
                 Hold it steady. The arrow looses on its own.
               </p>
+              <WindTag wind={round.wind} />
             </>
           ) : (
             <>
@@ -136,9 +181,11 @@ export function ArcheryScene({
                 <AimHint size={124} accent={activeColor} />
                 <p className="max-w-[17rem] text-left text-sm leading-5 text-black/60">
                   Point the back of the phone at the TV, screen facing you, and
-                  tap Ready. Tilt to aim, then hold still.
+                  tap Ready. Tilt to aim, then hold still — and aim into the
+                  wind.
                 </p>
               </div>
+              <WindTag wind={round.wind} />
             </>
           )}
 
