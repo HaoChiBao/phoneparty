@@ -10,7 +10,7 @@ import type { Shot } from "./logic";
 import { windStrength, type Wind } from "./wind";
 
 export const TARGET_Z = -9;
-export const TARGET_Y = 1.45;
+export const TARGET_Y = 0.95;
 /** Outer edge of the painted face. Aim of 1 lands on that ring. */
 export const TARGET_RADIUS = 1.6 / 1.5;
 
