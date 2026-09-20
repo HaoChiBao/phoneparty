@@ -158,6 +158,9 @@ io.on("connection", (socket) => {
       alpha: sample.alpha,
       beta: sample.beta,
       gamma: sample.gamma,
+      x: sample.x ?? 0,
+      y: sample.y ?? 0,
+      z: sample.z ?? 0,
       timestamp: sample.timestamp || now,
     });
   });

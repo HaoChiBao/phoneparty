@@ -1,7 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
-import type { Player } from "@/lib/protocol";
+import type { GyroSample, Player } from "@/lib/protocol";
 
 export function HostHud({
   code,
@@ -9,12 +9,14 @@ export function HostHud({
   players,
   connected,
   error,
+  gyroByPlayer,
 }: {
   code: string;
   joinUrl: string;
   players: Player[];
   connected: boolean;
   error: string | null;
+  gyroByPlayer: Record<string, GyroSample>;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
 
@@ -57,15 +59,21 @@ export function HostHud({
             Waiting for a phone…
           </span>
         ) : (
-          controllers.map((player) => (
-            <span
-              key={player.id}
-              className="px-3 py-1 text-xs text-white"
-              style={{ background: player.color }}
-            >
-              {player.name}
-            </span>
-          ))
+          controllers.map((player) => {
+            const motion = gyroByPlayer[player.id];
+            return (
+              <span
+                key={player.id}
+                className="px-3 py-1 text-xs text-white"
+                style={{ background: player.color }}
+              >
+                {player.name}
+                {motion
+                  ? `  ${motion.x.toFixed(2)} ${motion.y.toFixed(2)} ${motion.z.toFixed(2)}`
+                  : ""}
+              </span>
+            );
+          })
         )}
       </div>
     </div>

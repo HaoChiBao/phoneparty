@@ -15,6 +15,9 @@ export type GyroSample = {
   alpha: number;
   beta: number;
   gamma: number;
+  x: number;
+  y: number;
+  z: number;
   timestamp: number;
 };
 
@@ -22,6 +25,9 @@ export type CalibratedPose = {
   alpha: number;
   beta: number;
   gamma: number;
+  x: number;
+  y: number;
+  z: number;
 };
 
 export const PLAYER_COLORS = [

@@ -31,6 +31,9 @@ function Wand({ player, sample, calib }: WandState) {
         alpha: sample.alpha,
         beta: sample.beta,
         gamma: sample.gamma,
+        x: sample.x,
+        y: sample.y,
+        z: sample.z,
       };
     }
     setRelativeQuaternion(
@@ -40,6 +43,11 @@ function Wand({ player, sample, calib }: WandState) {
       scratch,
     );
     group.current.quaternion.copy(quaternion);
+    group.current.position.set(
+      sample.x,
+      1.15 + sample.y,
+      3.4 + sample.z,
+    );
 
     origin.set(0, 0, 0).applyMatrix4(group.current.matrixWorld);
     direction.set(0, 0, -1).applyQuaternion(group.current.quaternion);

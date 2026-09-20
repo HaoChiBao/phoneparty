@@ -29,6 +29,7 @@ export function HostSession({ code }: { code: string }) {
         players={players}
         connected={connected}
         error={error}
+        gyroByPlayer={gyroByPlayer}
       />
     </div>
   );

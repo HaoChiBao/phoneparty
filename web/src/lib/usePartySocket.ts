@@ -61,6 +61,9 @@ export function usePartySocket(code: string, role: Role, name?: string) {
           alpha: payload.alpha,
           beta: payload.beta,
           gamma: payload.gamma,
+          x: payload.x ?? 0,
+          y: payload.y ?? 0,
+          z: payload.z ?? 0,
           timestamp: payload.timestamp,
         },
       }));

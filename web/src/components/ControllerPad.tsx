@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { readOrientationEvent, requestMotionPermission } from "@/lib/orientation";
+import * as THREE from "three";
+import {
+  createPositionState,
+  readLinearAcceleration,
+  readOrientationEvent,
+  requestMotionPermission,
+  resetPosition,
+  setRelativeQuaternion,
+  stepPosition,
+} from "@/lib/orientation";
 import type { GyroSample } from "@/lib/protocol";
 import { usePartySocket } from "@/lib/usePartySocket";
 
@@ -14,20 +23,53 @@ export function ControllerPad({ code }: { code: string }) {
   const [motionError, setMotionError] = useState<string | null>(null);
   const [sample, setSample] = useState<GyroSample | null>(null);
   const latest = useRef<GyroSample | null>(null);
+  const position = useRef(createPositionState());
+  const worldQuat = useRef(new THREE.Quaternion());
+  const scratch = useRef(new THREE.Quaternion());
   const self = players.find((player) => player.id === selfId);
   const accent = self?.color ?? "#0057FF";
 
+  function publish(next: GyroSample) {
+    latest.current = next;
+    setSample(next);
+    socketRef.current?.emit("gyro", next);
+  }
+
   useEffect(() => {
     if (!motionReady) return;
+
     const onOrient = (event: DeviceOrientationEvent) => {
       const next = readOrientationEvent(event);
-      latest.current = next;
-      setSample(next);
-      socketRef.current?.emit("gyro", next);
+      const pos = position.current;
+      next.x = pos.x;
+      next.y = pos.y;
+      next.z = pos.z;
+      setRelativeQuaternion(worldQuat.current, next, null, scratch.current);
+      publish(next);
     };
+
+    const onMotion = (event: DeviceMotionEvent) => {
+      const accel = readLinearAcceleration(event);
+      if (!accel) return;
+      const now = Date.now();
+      stepPosition(position.current, accel, now, worldQuat.current);
+      const prev = latest.current;
+      publish({
+        alpha: prev?.alpha ?? 0,
+        beta: prev?.beta ?? 0,
+        gamma: prev?.gamma ?? 0,
+        x: position.current.x,
+        y: position.current.y,
+        z: position.current.z,
+        timestamp: now,
+      });
+    };
+
     window.addEventListener("deviceorientation", onOrient, true);
+    window.addEventListener("devicemotion", onMotion, true);
     return () => {
       window.removeEventListener("deviceorientation", onOrient, true);
+      window.removeEventListener("devicemotion", onMotion, true);
     };
   }, [motionReady, socketRef]);
 
@@ -43,27 +85,43 @@ export function ControllerPad({ code }: { code: string }) {
 
   function aimFromPointer(event: PointerEvent<HTMLElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
+    const nx = (event.clientX - rect.left) / rect.width;
+    const ny = (event.clientY - rect.top) / rect.height;
     const next: GyroSample = {
       alpha: 0,
-      beta: (0.5 - y) * 80,
-      gamma: (x - 0.5) * 80,
+      beta: (0.5 - ny) * 80,
+      gamma: (nx - 0.5) * 80,
+      x: (nx - 0.5) * 1.4,
+      y: (0.5 - ny) * 1,
+      z: 0,
       timestamp: Date.now(),
     };
-    latest.current = next;
-    setSample(next);
-    socketRef.current?.emit("gyro", next);
+    position.current.x = next.x;
+    position.current.y = next.y;
+    position.current.z = next.z;
+    publish(next);
     setMotionReady(true);
   }
 
   function calibrate() {
     const pose = latest.current;
     if (!pose) return;
+    resetPosition(position.current);
+    const next: GyroSample = {
+      ...pose,
+      x: 0,
+      y: 0,
+      z: 0,
+      timestamp: Date.now(),
+    };
+    publish(next);
     socketRef.current?.emit("calibrate", {
-      alpha: pose.alpha,
-      beta: pose.beta,
-      gamma: pose.gamma,
+      alpha: next.alpha,
+      beta: next.beta,
+      gamma: next.gamma,
+      x: 0,
+      y: 0,
+      z: 0,
     });
   }
 
@@ -94,7 +152,7 @@ export function ControllerPad({ code }: { code: string }) {
           style={{
             borderColor: accent,
             transform: sample
-              ? `rotate(${sample.gamma * 0.8}deg)`
+              ? `translate(${sample.x * 18}px, ${-sample.y * 18}px) rotate(${sample.gamma * 0.8}deg)`
               : undefined,
           }}
         >
@@ -103,10 +161,14 @@ export function ControllerPad({ code }: { code: string }) {
             style={{ background: accent }}
           />
         </button>
-        <p className="text-xs tracking-wide text-black/40">
+        <p className="text-center text-xs tracking-wide text-black/40">
           {sample
-            ? `${sample.beta.toFixed(0)}°  ${sample.gamma.toFixed(0)}°`
+            ? `gyro ${sample.beta.toFixed(0)}° ${sample.gamma.toFixed(0)}°`
             : "No gyro yet"}
+          <br />
+          {sample
+            ? `xyz ${sample.x.toFixed(2)}  ${sample.y.toFixed(2)}  ${sample.z.toFixed(2)}`
+            : "No position yet"}
         </p>
       </div>
 
@@ -129,8 +191,8 @@ export function ControllerPad({ code }: { code: string }) {
           </button>
         )}
         <p className="text-center text-xs text-black/40">
-          iPhones need HTTPS and a tap before the gyro streams. On a computer,
-          drag on the remote to aim.
+          iPhones need HTTPS and a tap before gyro and position stream. On a
+          computer, drag on the remote to aim and move.
         </p>
       </div>
     </div>
