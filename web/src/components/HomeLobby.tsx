@@ -2,19 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { listGames } from "@/games/catalog";
+import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
 
 export function HomeLobby() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const games = listGames();
 
   async function hostParty() {
     setBusy(true);
     setError(null);
     try {
-      const room = await createRoom();
+      const room = await createRoom(gameId);
       router.push(`/play/${room.code}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start a room");
@@ -39,11 +43,36 @@ export function HomeLobby() {
       </p>
       <h1 className="mt-3 text-5xl font-bold tracking-tight">Phone Party</h1>
       <p className="mt-4 max-w-sm text-[17px] leading-6 text-black/70">
-        Open a 3D room on the TV. Phones join with a QR code and aim with the
-        gyro.
+        Pick a game, open it on the TV, then join with a phone. Aim with the
+        front of the phone (the camera side).
       </p>
 
-      <div className="mt-10 flex flex-col gap-3">
+      <div className="mt-10 flex flex-col gap-2">
+        {games.map((game) => {
+          const selected = game.id === gameId;
+          return (
+            <button
+              key={game.id}
+              type="button"
+              onClick={() => setGameId(game.id)}
+              className={
+                selected
+                  ? "border border-accent bg-accent px-4 py-3 text-left text-white"
+                  : "border border-black/15 bg-white px-4 py-3 text-left"
+              }
+            >
+              <span className="block text-[15px] font-medium">{game.title}</span>
+              <span
+                className={`mt-1 block text-sm ${selected ? "text-white/80" : "text-black/50"}`}
+              >
+                {game.blurb}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3">
         <button
           type="button"
           onClick={hostParty}

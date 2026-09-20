@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { HostHud } from "@/components/HostHud";
-import { PartyScene } from "@/components/PartyScene";
+import { getGame } from "@/games/catalog";
 import { usePartySocket } from "@/lib/usePartySocket";
 
 export function HostSession({ code }: { code: string }) {
-  const { players, connected, error, gyroByPlayer, calibByPlayer } =
-    usePartySocket(code, "host");
+  const {
+    players,
+    connected,
+    error,
+    gyroByPlayer,
+    calibByPlayer,
+    gameId,
+    actionsByPlayer,
+    selectGame,
+  } = usePartySocket(code, "host");
   const [joinUrl, setJoinUrl] = useState("");
 
   useEffect(() => {
@@ -15,13 +23,16 @@ export function HostSession({ code }: { code: string }) {
   }, [code]);
 
   const controllers = players.filter((player) => player.role === "controller");
+  const game = getGame(gameId);
+  const Scene = game.Scene;
 
   return (
     <div className="relative h-dvh overflow-hidden bg-white">
-      <PartyScene
+      <Scene
         controllers={controllers}
         gyroByPlayer={gyroByPlayer}
         calibByPlayer={calibByPlayer}
+        actionsByPlayer={actionsByPlayer}
       />
       <HostHud
         code={code}
@@ -30,6 +41,8 @@ export function HostSession({ code }: { code: string }) {
         connected={connected}
         error={error}
         gyroByPlayer={gyroByPlayer}
+        gameId={gameId}
+        onSelectGame={selectGame}
       />
     </div>
   );

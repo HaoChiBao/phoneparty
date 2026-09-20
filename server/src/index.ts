@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Server } from "socket.io";
 import {
+  normalizeGameId,
   type ClientToServerEvents,
   type ServerToClientEvents,
   type SocketData,
@@ -11,6 +12,8 @@ import {
   getRoom,
   listPlayers,
   removePlayer,
+  setRoomGame,
+  type Room,
 } from "./rooms.ts";
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -57,7 +60,30 @@ function json(
   res.end(JSON.stringify(body));
 }
 
+function readJson(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on("end", () => {
+      if (chunks.length === 0) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      } catch {
+        reject(new Error("Invalid JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
 const lastGyroAt = new Map<string, number>();
+const lastGameActionAt = new Map<string, number>();
+const GAME_ACTION_MIN_INTERVAL_MS = 32;
 
 const httpServer = createServer((req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
@@ -75,8 +101,19 @@ const httpServer = createServer((req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/rooms") {
-    const room = getOrCreateRoom();
-    json(req, res, 201, { code: room.code });
+    readJson(req)
+      .then((body) => {
+        const gameId = normalizeGameId(
+          body && typeof body === "object" && "gameId" in body
+            ? (body as { gameId?: unknown }).gameId
+            : undefined,
+        );
+        const room = getOrCreateRoom(undefined, gameId);
+        json(req, res, 201, { code: room.code, gameId: room.gameId });
+      })
+      .catch(() => {
+        json(req, res, 400, { error: "Invalid JSON" });
+      });
     return;
   }
 
@@ -87,12 +124,28 @@ const httpServer = createServer((req, res) => {
       json(req, res, 404, { error: "Room not found" });
       return;
     }
-    json(req, res, 200, { code: room.code, players: listPlayers(room) });
+    json(req, res, 200, {
+      code: room.code,
+      gameId: room.gameId,
+      players: listPlayers(room),
+    });
     return;
   }
 
   json(req, res, 404, { error: "Not found" });
 });
+
+function emitRoomState(room: Room) {
+  const players = listPlayers(room);
+  for (const member of players) {
+    io.to(member.id).emit("roomState", {
+      code: room.code,
+      players,
+      selfId: member.id,
+      gameId: room.gameId,
+    });
+  }
+}
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, object, SocketData>(
   httpServer,
@@ -135,15 +188,8 @@ io.on("connection", (socket) => {
     socket.data.role = player.role;
     socket.join(room.code);
 
-    const players = listPlayers(room);
-    for (const member of players) {
-      io.to(member.id).emit("roomState", {
-        code: room.code,
-        players,
-        selfId: member.id,
-      });
-    }
-    ack?.({ ok: true, selfId: player.id });
+    emitRoomState(room);
+    ack?.({ ok: true, selfId: player.id, gameId: room.gameId });
   });
 
   socket.on("gyro", (sample) => {
@@ -174,21 +220,44 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("selectGame", (payload, ack) => {
+    const roomCode = socket.data.roomCode;
+    const room = roomCode ? getRoom(roomCode) : null;
+    if (!room || socket.data.role !== "host") {
+      ack?.({ ok: false, error: "Only the host can pick a game" });
+      return;
+    }
+    const gameId = setRoomGame(room, payload.gameId);
+    emitRoomState(room);
+    ack?.({ ok: true, gameId });
+  });
+
+  socket.on("gameAction", (payload) => {
+    const roomCode = socket.data.roomCode;
+    if (!roomCode || socket.data.role !== "controller") return;
+    const now = Date.now();
+    const previous = lastGameActionAt.get(socket.id) ?? 0;
+    if (now - previous < GAME_ACTION_MIN_INTERVAL_MS) return;
+    lastGameActionAt.set(socket.id, now);
+    const type = String(payload?.type ?? "").slice(0, 48);
+    if (!type) return;
+    io.to(roomCode).emit("gameActionState", {
+      playerId: socket.id,
+      type,
+      data: payload.data,
+      timestamp: now,
+    });
+  });
+
   socket.on("disconnect", () => {
     lastGyroAt.delete(socket.id);
+    lastGameActionAt.delete(socket.id);
     const roomCode = socket.data.roomCode;
     if (!roomCode) return;
     removePlayer(roomCode, socket.id);
     const room = getRoom(roomCode);
     if (!room) return;
-    const players = listPlayers(room);
-    for (const member of players) {
-      io.to(member.id).emit("roomState", {
-        code: room.code,
-        players,
-        selfId: member.id,
-      });
-    }
+    emitRoomState(room);
   });
 });
 

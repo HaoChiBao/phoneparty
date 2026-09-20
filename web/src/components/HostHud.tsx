@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import { listGames } from "@/games/catalog";
 import type { GyroSample, Player } from "@/lib/protocol";
 
 export function HostHud({
@@ -10,6 +11,8 @@ export function HostHud({
   connected,
   error,
   gyroByPlayer,
+  gameId,
+  onSelectGame,
 }: {
   code: string;
   joinUrl: string;
@@ -17,8 +20,11 @@ export function HostHud({
   connected: boolean;
   error: string | null;
   gyroByPlayer: Record<string, GyroSample>;
+  gameId: string;
+  onSelectGame: (gameId: string) => void;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
+  const games = listGames();
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-5">
@@ -29,12 +35,32 @@ export function HostHud({
           </p>
           <h1 className="mt-1 text-4xl font-bold tracking-tight">{code}</h1>
           <p className="mt-2 max-w-xs text-sm text-black/60">
-            Scan the QR with a phone. Point at the wall, then calibrate.
+            Scan the QR with a phone. Point the front camera side at the TV,
+            then calibrate.
           </p>
           <p className="mt-2 text-xs text-black/45">
             {connected ? "Realtime connected" : "Connecting…"}
             {error ? ` · ${error}` : ""}
           </p>
+          <div className="pointer-events-auto mt-3 flex flex-wrap gap-2">
+            {games.map((game) => {
+              const selected = game.id === gameId;
+              return (
+                <button
+                  key={game.id}
+                  type="button"
+                  onClick={() => onSelectGame(game.id)}
+                  className={
+                    selected
+                      ? "bg-accent px-2 py-1 text-xs text-white"
+                      : "border border-black/20 bg-white px-2 py-1 text-xs"
+                  }
+                >
+                  {game.title}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="pointer-events-auto border border-black bg-white p-3">
           {joinUrl ? (

@@ -6,11 +6,13 @@ import { connectRealtime } from "./realtime";
 import type {
   CalibratedPose,
   ClientToServerEvents,
+  GameActionState,
   GyroSample,
   Player,
   Role,
   ServerToClientEvents,
 } from "./protocol";
+import { DEFAULT_GAME_ID } from "./protocol";
 
 type PartySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -25,6 +27,10 @@ export function usePartySocket(code: string, role: Role, name?: string) {
   );
   const [calibByPlayer, setCalibByPlayer] = useState<
     Record<string, CalibratedPose>
+  >({});
+  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
+  const [actionsByPlayer, setActionsByPlayer] = useState<
+    Record<string, GameActionState>
   >({});
 
   useEffect(() => {
@@ -42,6 +48,7 @@ export function usePartySocket(code: string, role: Role, name?: string) {
             return;
           }
           setSelfId(res.selfId ?? socket.id ?? null);
+          if (res.gameId) setGameId(res.gameId);
           setError(null);
           setConnected(true);
         },
@@ -52,6 +59,7 @@ export function usePartySocket(code: string, role: Role, name?: string) {
     socket.on("roomState", (payload) => {
       setPlayers(payload.players);
       setSelfId(payload.selfId);
+      setGameId(payload.gameId);
       setConnected(true);
     });
     socket.on("gyroState", (payload) => {
@@ -74,6 +82,12 @@ export function usePartySocket(code: string, role: Role, name?: string) {
         [payload.playerId]: payload.pose,
       }));
     });
+    socket.on("gameActionState", (payload) => {
+      setActionsByPlayer((current) => ({
+        ...current,
+        [payload.playerId]: payload,
+      }));
+    });
     socket.on("error", (payload) => {
       setError(payload.message);
     });
@@ -90,6 +104,14 @@ export function usePartySocket(code: string, role: Role, name?: string) {
     };
   }, [code, name, role]);
 
+  function selectGame(nextGameId: string) {
+    socketRef.current?.emit("selectGame", { gameId: nextGameId });
+  }
+
+  function sendGameAction(type: string, data?: unknown) {
+    socketRef.current?.emit("gameAction", { type, data });
+  }
+
   return {
     socketRef,
     players,
@@ -98,5 +120,9 @@ export function usePartySocket(code: string, role: Role, name?: string) {
     connected,
     gyroByPlayer,
     calibByPlayer,
+    gameId,
+    actionsByPlayer,
+    selectGame,
+    sendGameAction,
   };
 }

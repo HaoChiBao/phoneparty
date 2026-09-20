@@ -1,7 +1,11 @@
 import * as THREE from "three";
 import type { CalibratedPose, GyroSample } from "./protocol";
 
+// q1 is the DeviceOrientationControls screen-to-camera correction (-90° X).
+// qFront is 180° about Y so wand -Z aims out the phone front (screen / front camera), not the back.
+
 const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+const qFront = new THREE.Quaternion(0, 1, 0, 0);
 const euler = new THREE.Euler();
 
 export function setDeviceQuaternion(
@@ -18,6 +22,7 @@ export function setDeviceQuaternion(
   );
   out.setFromEuler(euler);
   out.multiply(q1);
+  out.multiply(qFront);
   return out;
 }
 

@@ -23,12 +23,14 @@ export function connectRealtime() {
   }) as Socket<ServerToClientEvents, ClientToServerEvents>;
 }
 
-export async function createRoom() {
+export async function createRoom(gameId?: string) {
   const response = await fetch(`${getRealtimeHttpUrl()}/rooms`, {
     method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(gameId ? { gameId } : {}),
   });
   if (!response.ok) {
     throw new Error("Could not create a room");
   }
-  return (await response.json()) as { code: string };
+  return (await response.json()) as { code: string; gameId: string };
 }

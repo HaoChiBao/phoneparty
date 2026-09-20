@@ -6,13 +6,13 @@ This file is the source of truth for agents working in this repo. `web/AGENTS.md
 
 ## Product
 
-- Host opens the site and creates a room.
-- The host screen (`/play/[code]`) is the TV: a 3D scene, room code, and a QR that points at `/c/[code]`.
+- Host opens the site, picks a game, and creates a room.
+- The host screen (`/play/[code]`) is the TV: that game’s 3D scene, room code, and a QR that points at `/c/[code]`. The host can switch games in the room.
 - A phone scans the QR and lands on a separate controller page. No 3D canvas on the phone.
 - After **Enable motion**, the phone streams orientation and position into the room. **Calibrate at the TV** zeros relative aim and position.
 - On a computer, dragging the on-screen remote aims and sets X/Y so the session can be tested without a phone.
 
-The current 3D scene is a test arena: floor grid, back wall, three ring targets, one wand per connected phone. Future games should reuse the same room/session/controller pipeline.
+Shipped games live in `web/src/games/`. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
 
 ## Repo
 
@@ -21,6 +21,7 @@ npm workspaces at the root.
 ```
 phoneparty/
   web/                 Next.js 16 App Router (Vercel)
+  web/src/games/       One folder per game + catalog
   server/              Socket.IO realtime (Railway)
   railway.json         Railway start/health for the server
   package.json         workspaces + `npm run dev` / `npm start`
@@ -69,8 +70,8 @@ Room codes are 4 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
 HTTP (CORS + JSON):
 
 - `GET /health` → `{ ok: true }`
-- `POST /rooms` → `{ code }`
-- `GET /rooms/:code` → `{ code, players }` or 404
+- `POST /rooms` `{ gameId? }` → `{ code, gameId }`
+- `GET /rooms/:code` → `{ code, gameId, players }` or 404
 
 Socket.IO events:
 
@@ -79,19 +80,23 @@ Socket.IO events:
 - `joinRoom({ code, role: "host" \| "controller", name? }, ack)`
 - `gyro({ alpha, beta, gamma, x, y, z, timestamp })`
 - `calibrate({ alpha, beta, gamma, x, y, z })`
+- `selectGame({ gameId }, ack)` — host only
+- `gameAction({ type, data? })` — controller only; per-game buttons without a protocol change
 
 **Server → client**
 
-- `roomState({ code, players, selfId })`
+- `roomState({ code, players, selfId, gameId })`
 - `gyroState({ playerId, alpha, beta, gamma, x, y, z, timestamp })`
 - `calibrated({ playerId, pose })`
+- `gameActionState({ playerId, type, data?, timestamp })`
 - `error({ message })`
 
 Rules:
 
 - Hosts may create the room on join. Controllers join an existing room or get "Room not found."
-- Only controllers emit `gyro` / `calibrate`.
-- Gyro is rate-limited on the server to about 32ms.
+- Only controllers emit `gyro` / `calibrate` / `gameAction`.
+- Only the host emits `selectGame`. The server does not validate `gameId` against the web catalog; unknown ids fall back to Range on the client.
+- Gyro and `gameAction` are rate-limited on the server to about 32ms.
 - Hosts do not consume player colors. Controllers take `#0057FF`, then the remaining blues/blacks.
 - Rooms are in-memory. A Railway restart wipes sessions.
 
@@ -101,12 +106,13 @@ Rules:
 
 `web/src/lib/orientation.ts` converts device sensors into the sample the server forwards.
 
-- **Gyro / aim:** `DeviceOrientationEvent` `alpha`, `beta`, `gamma`. Mapped to a quaternion (`YXZ`, then a −90° X correction). Calibration stores a pose and later samples are relative to it.
+- **Aim axis:** the front of the phone (screen / front-camera face, device +Z). After the usual DeviceOrientation `YXZ` + −90° X map, a 180° Y flip makes wand −Z point out that face. Hold the phone so the camera side faces the TV.
+- **Gyro / aim:** `DeviceOrientationEvent` `alpha`, `beta`, `gamma`. Calibration stores a pose and later samples are relative to it.
 - **Position:** `DeviceMotionEvent.acceleration` (gravity removed). Integrated with a deadzone and velocity damping into bounded `x`, `y`, `z`. This is not GPS and it will drift. Calibrate resets position to the origin.
 - **iOS:** both `DeviceOrientationEvent.requestPermission` and `DeviceMotionEvent.requestPermission` run on the Enable motion tap. Needs HTTPS (or localhost).
 - **Desktop:** pointer drag on the remote sets `beta`/`gamma` and `x`/`y` (`z` stays 0).
 
-The 3D wand (`web/src/components/PartyScene.tsx`) applies the relative quaternion and offsets the wand from `[0, 1.15, 3.4]` by `(x, y, z)`. A laser is cast onto the back wall at `z = -6`.
+The shared 3D wand (`web/src/games/shared/Wand.tsx`) applies the relative quaternion and offsets the wand from `[0, 1.15, 3.4]` by `(x, y, z)`. A laser is cast onto the back wall at `z = -6`.
 
 ## Local run
 
@@ -161,7 +167,7 @@ git fetch https://github.com/HaoChiBao/phoneparty.git +main:refs/remotes/origin/
 ## How to use it after setup
 
 1. Open https://phoneparty.vercel.app on the TV or laptop.
-2. Click **Host a room**.
+2. Pick a game. Click **Host a room**.
 3. Scan the QR with a phone (or open the shown `/c/CODE` URL).
 4. Tap **Enable motion**. Point the phone at the TV.
 5. Tap **Calibrate at the TV**.
@@ -171,13 +177,18 @@ Same-Wi-Fi local test: `npm run dev`, open `http://{LAN-IP}:3000` on the host, s
 
 ## Adding a game
 
-Keep the session and controller. Swap the 3D scene, not the join path.
+Keep the session and controller. Add a folder under `web/src/games/`. Do not fork `/`, `/play/[code]`, `/c/[code]`, Socket.IO, or `usePartySocket`.
 
-1. Leave `/`, `/play/[code]`, `/c/[code]`, Socket.IO events, and `usePartySocket` in place unless the game needs a new event.
-2. Replace or branch `PartyScene` / `HostSession` for the new playfield.
-3. Read `gyroByPlayer` and `calibByPlayer` for each controller. Treat `alpha/beta/gamma` as aim and `x/y/z` as a short-range position offset.
-4. New buttons or gestures belong on `ControllerPad` and need a new socket event in both protocol files plus `server/src/index.ts`.
-5. Keep the Helvetica / white / black / blue UI unless the game has its own art direction on the 3D canvas only.
+Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadExtra`). Developers can work in separate folders at the same time. The only shared edit when shipping a new title is one import plus one array entry in `web/src/games/catalog.ts`.
+
+1. Copy `web/src/games/sandbox/` to `web/src/games/<id>/`. Use a kebab-case id (`duck-hunt`).
+2. Export a `GameDefinition` from that folder’s `index.ts`. Put the 3D playfield in `Scene.tsx`.
+3. Register it in `web/src/games/catalog.ts`. Leave the server alone unless you need a new shared event.
+4. In `Scene`, read `gyroByPlayer` and `calibByPlayer`. Treat `alpha/beta/gamma` as aim and `x/y/z` as a short-range position offset. Reuse `web/src/games/shared/Wand.tsx` and `HostCanvas.tsx` when they fit.
+5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button.
+6. Chrome stays Helvetica / white / black / blue. Art direction belongs on the 3D canvas.
+
+`gameId` is stored on the room and broadcast in `roomState`. The host picker and home lobby both read `listGames()`. The shared remote (enable motion, calibrate, aim pad) stays in `ControllerPad`.
 
 ## Agent notes
 

@@ -11,14 +11,21 @@ import {
   setRelativeQuaternion,
   stepPosition,
 } from "@/lib/orientation";
+import { getGame } from "@/games/catalog";
 import type { GyroSample } from "@/lib/protocol";
 import { usePartySocket } from "@/lib/usePartySocket";
 
 export function ControllerPad({ code }: { code: string }) {
-  const { socketRef, connected, error, players, selfId } = usePartySocket(
-    code,
-    "controller",
-  );
+  const {
+    socketRef,
+    connected,
+    error,
+    players,
+    selfId,
+    gameId,
+    actionsByPlayer,
+    sendGameAction,
+  } = usePartySocket(code, "controller");
   const [motionReady, setMotionReady] = useState(false);
   const [motionError, setMotionError] = useState<string | null>(null);
   const [sample, setSample] = useState<GyroSample | null>(null);
@@ -28,6 +35,9 @@ export function ControllerPad({ code }: { code: string }) {
   const scratch = useRef(new THREE.Quaternion());
   const self = players.find((player) => player.id === selfId);
   const accent = self?.color ?? "#0057FF";
+  const game = getGame(gameId);
+  const PadExtra = game.PadExtra;
+  const lastAction = selfId ? actionsByPlayer[selfId] : undefined;
 
   function publish(next: GyroSample) {
     latest.current = next;
@@ -89,8 +99,8 @@ export function ControllerPad({ code }: { code: string }) {
     const ny = (event.clientY - rect.top) / rect.height;
     const next: GyroSample = {
       alpha: 0,
-      beta: (0.5 - ny) * 80,
-      gamma: (nx - 0.5) * 80,
+      beta: (ny - 0.5) * 80,
+      gamma: (0.5 - nx) * 80,
       x: (nx - 0.5) * 1.4,
       y: (0.5 - ny) * 1,
       z: 0,
@@ -129,12 +139,12 @@ export function ControllerPad({ code }: { code: string }) {
     <div className="flex min-h-dvh flex-col justify-between bg-white px-5 py-6">
       <header>
         <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-          Phone controller
+          {game.title}
         </p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">{code}</h1>
         <p className="mt-2 text-sm text-black/60">
           {connected
-            ? "You are in the room. Enable motion, point at the TV, then calibrate."
+            ? "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."
             : "Joining the room…"}
         </p>
         {(error || motionError) && (
@@ -170,6 +180,9 @@ export function ControllerPad({ code }: { code: string }) {
             ? `xyz ${sample.x.toFixed(2)}  ${sample.y.toFixed(2)}  ${sample.z.toFixed(2)}`
             : "No position yet"}
         </p>
+        {PadExtra ? (
+          <PadExtra sendAction={sendGameAction} lastAction={lastAction} />
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -191,8 +204,8 @@ export function ControllerPad({ code }: { code: string }) {
           </button>
         )}
         <p className="text-center text-xs text-black/40">
-          iPhones need HTTPS and a tap before gyro and position stream. On a
-          computer, drag on the remote to aim and move.
+          Aim with the front of the phone, the camera-facing side. iPhones need
+          HTTPS and a tap before sensors stream. On a computer, drag the remote.
         </p>
       </div>
     </div>

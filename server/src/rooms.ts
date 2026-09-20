@@ -1,13 +1,16 @@
 import {
+  DEFAULT_GAME_ID,
   PLAYER_COLORS,
   ROOM_ALPHABET,
   ROOM_CODE_LENGTH,
+  normalizeGameId,
   type Player,
   type Role,
 } from "./protocol.ts";
 
 export type Room = {
   code: string;
+  gameId: string;
   players: Map<string, Player>;
   createdAt: number;
 };
@@ -22,7 +25,7 @@ function randomCode() {
   return code;
 }
 
-export function createRoom(preferred?: string) {
+export function createRoom(preferred?: string, gameId = DEFAULT_GAME_ID) {
   const requested = preferred?.toUpperCase().replace(/[^A-Z0-9]/g, "") ?? "";
   let code =
     requested.length === ROOM_CODE_LENGTH && !rooms.has(requested)
@@ -31,7 +34,12 @@ export function createRoom(preferred?: string) {
   while (rooms.has(code)) {
     code = randomCode();
   }
-  const room: Room = { code, players: new Map(), createdAt: Date.now() };
+  const room: Room = {
+    code,
+    gameId: normalizeGameId(gameId),
+    players: new Map(),
+    createdAt: Date.now(),
+  };
   rooms.set(code, room);
   return room;
 }
@@ -40,13 +48,18 @@ export function getRoom(code: string) {
   return rooms.get(code.toUpperCase()) ?? null;
 }
 
-export function getOrCreateRoom(code?: string) {
+export function getOrCreateRoom(code?: string, gameId = DEFAULT_GAME_ID) {
   if (code) {
     const existing = getRoom(code);
     if (existing) return existing;
-    if (code.length === ROOM_CODE_LENGTH) return createRoom(code);
+    if (code.length === ROOM_CODE_LENGTH) return createRoom(code, gameId);
   }
-  return createRoom();
+  return createRoom(undefined, gameId);
+}
+
+export function setRoomGame(room: Room, gameId: string) {
+  room.gameId = normalizeGameId(gameId);
+  return room.gameId;
 }
 
 export function addPlayer(room: Room, id: string, role: Role, name?: string) {

@@ -38,13 +38,49 @@ export const PLAYER_COLORS = [
   "#7AA6FF",
 ] as const;
 
+export const DEFAULT_GAME_ID = "range";
+
+export type GameId = string;
+
+export type GameAction = {
+  type: string;
+  data?: unknown;
+};
+
+export type GameActionState = {
+  playerId: string;
+  type: string;
+  data?: unknown;
+  timestamp: number;
+};
+
+export function normalizeGameId(
+  value: unknown,
+  fallback = DEFAULT_GAME_ID,
+): string {
+  if (typeof value !== "string") return fallback;
+  const id = value.toLowerCase().trim();
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(id)) return fallback;
+  return id;
+}
+
 export interface ClientToServerEvents {
   joinRoom: (
     payload: { code: string; role: Role; name?: string },
-    ack?: (res: { ok: boolean; error?: string; selfId?: string }) => void,
+    ack?: (res: {
+      ok: boolean;
+      error?: string;
+      selfId?: string;
+      gameId?: string;
+    }) => void,
   ) => void;
   gyro: (sample: GyroSample) => void;
   calibrate: (pose: CalibratedPose) => void;
+  selectGame: (
+    payload: { gameId: string },
+    ack?: (res: { ok: boolean; error?: string; gameId?: string }) => void,
+  ) => void;
+  gameAction: (payload: GameAction) => void;
 }
 
 export interface ServerToClientEvents {
@@ -52,8 +88,10 @@ export interface ServerToClientEvents {
     code: string;
     players: Player[];
     selfId: string;
+    gameId: string;
   }) => void;
   gyroState: (payload: { playerId: string } & GyroSample) => void;
   calibrated: (payload: { playerId: string; pose: CalibratedPose }) => void;
+  gameActionState: (payload: GameActionState) => void;
   error: (payload: { message: string }) => void;
 }
