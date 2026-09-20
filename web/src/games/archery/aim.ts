@@ -8,7 +8,7 @@ import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 /** Tunables for aiming. Retune here after a real-phone pass. */
 export const AIM = {
   // Tilt that moves the aim from the bullseye to the edge of the target face.
-  degreesToEdge: 14,
+  degreesToEdge: 10,
   // How long the shot must stay steady before the arrow looses.
   holdSeconds: 5,
   // Aim drift, in degrees per second, that still counts as steady.
@@ -87,6 +87,15 @@ export type HoldState = { hold: number; steady: boolean };
 
 const IDLE_HOLD: HoldState = { hold: 0, steady: false };
 
+function vibrateHold(durationMs: number) {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  try {
+    navigator.vibrate(durationMs);
+  } catch {
+    // Haptics are optional; a browser restriction must not interrupt the shot.
+  }
+}
+
 /**
  * Fills while the aim sits still and drains when it wanders. Runs on its own
  * tick rather than on sensor events so the bar moves at a steady rate whatever
@@ -114,8 +123,11 @@ export function useSteadyHold({
     let hold = 0;
     let previous = aimRef.current;
     let released = false;
+    let pulseIn = 0;
+    let wasSteady = false;
 
     const id = setInterval(() => {
+      if (released) return;
       const aim = aimRef.current;
       const drift =
         Math.hypot(aim.xDeg - previous.xDeg, aim.yDeg - previous.yDeg) / step;
@@ -127,11 +139,29 @@ export function useSteadyHold({
       setState({ hold, steady });
       if (!released && hold >= AIM.holdSeconds) {
         released = true;
+        vibrateHold(0);
         releaseRef.current(aim);
+        return;
       }
+      if (steady) {
+        pulseIn -= step;
+        if (pulseIn <= 0) {
+          // Light taps build from every 600ms to every 180ms near release.
+          // Keep each pulse short so it does not shake the player's aim.
+          vibrateHold(12);
+          pulseIn = 0.6 - 0.42 * (hold / AIM.holdSeconds);
+        }
+      } else {
+        if (wasSteady) vibrateHold(0);
+        pulseIn = 0;
+      }
+      wasSteady = steady;
     }, AIM.tickMs);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      vibrateHold(0);
+    };
   }, [active, aimRef]);
 
   // Masked rather than reset inside the effect, so a turn that ends mid-draw

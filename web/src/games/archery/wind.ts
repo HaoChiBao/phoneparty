@@ -3,11 +3,11 @@
 /** Tunables for the wind. Retune here after a real-phone pass. */
 export const WIND = {
   // Most the wind can push an arrow, as a fraction of the target radius.
-  maxDrift: 0.55,
+  maxDrift: 0.85,
   // Gusts lift and drop the arrow less than they blow it sideways.
   verticalShare: 0.35,
   // Above 1 biases toward gentle days, so a monster gust stays a surprise.
-  calmBias: 1.6,
+  calmBias: 1.15,
 } as const;
 
 export type Wind = {
