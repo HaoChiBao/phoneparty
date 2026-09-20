@@ -232,6 +232,38 @@ io.on("connection", (socket) => {
     ack?.({ ok: true, gameId });
   });
 
+  socket.on("kickPlayer", (payload, ack) => {
+    const roomCode = socket.data.roomCode;
+    const room = roomCode ? getRoom(roomCode) : null;
+    if (!room || socket.data.role !== "host") {
+      ack?.({ ok: false, error: "Only the host can kick a phone" });
+      return;
+    }
+    const playerId = payload.playerId;
+    const target = room.players.get(playerId);
+    if (!target || target.role !== "controller") {
+      ack?.({ ok: false, error: "That phone is not in this room" });
+      return;
+    }
+
+    const targetSocket = io.sockets.sockets.get(playerId);
+    targetSocket?.emit("kicked", {
+      message: "The TV removed you from the room.",
+    });
+    targetSocket?.leave(room.code);
+    if (targetSocket) {
+      targetSocket.data.roomCode = undefined;
+      targetSocket.data.playerId = undefined;
+      targetSocket.data.role = undefined;
+    }
+    lastGyroAt.delete(playerId);
+    lastGameActionAt.delete(playerId);
+    removePlayer(room.code, playerId);
+    const next = getRoom(room.code);
+    if (next) emitRoomState(next);
+    ack?.({ ok: true });
+  });
+
   socket.on("gameAction", (payload) => {
     const roomCode = socket.data.roomCode;
     if (!roomCode || socket.data.role !== "controller") return;

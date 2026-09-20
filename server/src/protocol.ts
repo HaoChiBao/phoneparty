@@ -70,10 +70,12 @@ export const SOCKET_EVENTS = {
   calibrate: "calibrate",
   selectGame: "selectGame",
   gameAction: "gameAction",
+  kickPlayer: "kickPlayer",
   roomState: "roomState",
   gyroState: "gyroState",
   calibrated: "calibrated",
   gameActionState: "gameActionState",
+  kicked: "kicked",
   error: "error",
 } as const;
 
@@ -94,6 +96,10 @@ export interface ClientToServerEvents {
     ack?: (res: { ok: boolean; error?: string; gameId?: string }) => void,
   ) => void;
   gameAction: (payload: GameAction) => void;
+  kickPlayer: (
+    payload: { playerId: string },
+    ack?: (res: { ok: boolean; error?: string }) => void,
+  ) => void;
 }
 
 export interface ServerToClientEvents {
@@ -106,6 +112,7 @@ export interface ServerToClientEvents {
   gyroState: (payload: { playerId: string } & GyroSample) => void;
   calibrated: (payload: { playerId: string; pose: CalibratedPose }) => void;
   gameActionState: (payload: GameActionState) => void;
+  kicked: (payload: { message: string }) => void;
   error: (payload: { message: string }) => void;
 }
 

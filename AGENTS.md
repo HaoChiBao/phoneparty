@@ -81,6 +81,7 @@ Socket.IO events:
 - `gyro({ alpha, beta, gamma, x, y, z, timestamp })`
 - `calibrate({ alpha, beta, gamma, x, y, z })`
 - `selectGame({ gameId }, ack)` — host only
+- `kickPlayer({ playerId }, ack)` — host only; drops a controller from the room
 - `gameAction({ type, data? })` — controller only; per-game buttons without a protocol change
 
 **Server → client**
@@ -89,13 +90,14 @@ Socket.IO events:
 - `gyroState({ playerId, alpha, beta, gamma, x, y, z, timestamp })`
 - `calibrated({ playerId, pose })`
 - `gameActionState({ playerId, type, data?, timestamp })`
+- `kicked({ message })` — sent to a controller the host removed
 - `error({ message })`
 
 Rules:
 
 - Hosts may create the room on join. Controllers join an existing room or get "Room not found."
 - Only controllers emit `gyro` / `calibrate` / `gameAction`.
-- Only the host emits `selectGame`. The server does not validate `gameId` against the web catalog; unknown ids fall back to Range on the client.
+- Only the host emits `selectGame` or `kickPlayer`. The server does not validate `gameId` against the web catalog; unknown ids fall back to Range on the client. A kicked phone can scan or tap **Rejoin** to come back.
 - Gyro and `gameAction` are rate-limited on the server to about 32ms.
 - Hosts do not consume player colors. Controllers take `#0057FF`, then the remaining blues/blacks.
 - Rooms are in-memory. A Railway restart wipes sessions.

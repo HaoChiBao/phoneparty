@@ -25,6 +25,8 @@ export function ControllerPad({ code }: { code: string }) {
     gameId,
     actionsByPlayer,
     sendGameAction,
+    kicked,
+    rejoin,
   } = usePartySocket(code, "controller");
   const [motionReady, setMotionReady] = useState(false);
   const [motionError, setMotionError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export function ControllerPad({ code }: { code: string }) {
   function publish(next: GyroSample) {
     latest.current = next;
     setSample(next);
+    if (!connected) return;
     socketRef.current?.emit("gyro", next);
   }
 
@@ -142,9 +145,11 @@ export function ControllerPad({ code }: { code: string }) {
         </p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">{code}</h1>
         <p className="mt-2 text-sm text-black/60">
-          {connected
-            ? "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."
-            : "Joining the room…"}
+          {kicked
+            ? "The TV removed you from the room."
+            : connected
+              ? "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."
+              : "Joining the room…"}
         </p>
         {(error || motionError) && (
           <p className="mt-3 text-sm text-accent">{error ?? motionError}</p>
@@ -185,7 +190,15 @@ export function ControllerPad({ code }: { code: string }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        {!motionReady ? (
+        {kicked ? (
+          <button
+            type="button"
+            onClick={rejoin}
+            className="h-12 bg-accent text-[15px] font-medium text-white"
+          >
+            Rejoin
+          </button>
+        ) : !motionReady ? (
           <button
             type="button"
             onClick={enableMotion}

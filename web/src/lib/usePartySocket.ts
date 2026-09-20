@@ -32,12 +32,15 @@ export function usePartySocket(code: string, role: Role, name?: string) {
   const [actionsByPlayer, setActionsByPlayer] = useState<
     Record<string, GameActionState>
   >({});
+  const [kicked, setKicked] = useState(false);
+  const skipJoin = useRef(false);
 
   useEffect(() => {
     const socket = connectRealtime();
     socketRef.current = socket;
 
     const join = () => {
+      if (skipJoin.current) return;
       socket.emit(
         "joinRoom",
         { code, role, name },
@@ -49,6 +52,7 @@ export function usePartySocket(code: string, role: Role, name?: string) {
           }
           setSelfId(res.selfId ?? socket.id ?? null);
           if (res.gameId) setGameId(res.gameId);
+          setKicked(false);
           setError(null);
           setConnected(true);
         },
@@ -57,10 +61,32 @@ export function usePartySocket(code: string, role: Role, name?: string) {
 
     socket.on("connect", join);
     socket.on("roomState", (payload) => {
+      const ids = new Set(payload.players.map((player) => player.id));
       setPlayers(payload.players);
       setSelfId(payload.selfId);
       setGameId(payload.gameId);
       setConnected(true);
+      setGyroByPlayer((current) => {
+        const next: Record<string, GyroSample> = {};
+        for (const id of ids) {
+          if (current[id]) next[id] = current[id];
+        }
+        return next;
+      });
+      setCalibByPlayer((current) => {
+        const next: Record<string, CalibratedPose> = {};
+        for (const id of ids) {
+          if (current[id]) next[id] = current[id];
+        }
+        return next;
+      });
+      setActionsByPlayer((current) => {
+        const next: Record<string, GameActionState> = {};
+        for (const id of ids) {
+          if (current[id]) next[id] = current[id];
+        }
+        return next;
+      });
     });
     socket.on("gyroState", (payload) => {
       setGyroByPlayer((current) => ({
@@ -88,6 +114,13 @@ export function usePartySocket(code: string, role: Role, name?: string) {
         [payload.playerId]: payload,
       }));
     });
+    socket.on("kicked", () => {
+      skipJoin.current = true;
+      setKicked(true);
+      setConnected(false);
+      setPlayers([]);
+      setError(null);
+    });
     socket.on("error", (payload) => {
       setError(payload.message);
     });
@@ -112,17 +145,52 @@ export function usePartySocket(code: string, role: Role, name?: string) {
     socketRef.current?.emit("gameAction", { type, data });
   }
 
+  function kickPlayer(playerId: string) {
+    socketRef.current?.emit("kickPlayer", { playerId });
+  }
+
+  function rejoin() {
+    skipJoin.current = false;
+    setKicked(false);
+    setError(null);
+    const socket = socketRef.current;
+    if (!socket) return;
+    if (!socket.connected) {
+      socket.connect();
+      return;
+    }
+    socket.emit(
+      "joinRoom",
+      { code, role, name },
+      (res) => {
+        if (!res.ok) {
+          setError(res.error ?? "Could not join room");
+          setConnected(false);
+          return;
+        }
+        setSelfId(res.selfId ?? socket.id ?? null);
+        if (res.gameId) setGameId(res.gameId);
+        setKicked(false);
+        setError(null);
+        setConnected(true);
+      },
+    );
+  }
+
   return {
     socketRef,
     players,
     selfId,
     error,
     connected,
+    kicked,
     gyroByPlayer,
     calibByPlayer,
     gameId,
     actionsByPlayer,
     selectGame,
     sendGameAction,
+    kickPlayer,
+    rejoin,
   };
 }

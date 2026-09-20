@@ -15,6 +15,7 @@ export function HostSession({ code }: { code: string }) {
     gameId,
     actionsByPlayer,
     selectGame,
+    kickPlayer,
   } = usePartySocket(code, "host");
   const [joinUrl, setJoinUrl] = useState("");
 
@@ -43,6 +44,7 @@ export function HostSession({ code }: { code: string }) {
         gyroByPlayer={gyroByPlayer}
         gameId={gameId}
         onSelectGame={selectGame}
+        onKick={kickPlayer}
       />
     </div>
   );

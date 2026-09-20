@@ -13,6 +13,7 @@ export function HostHud({
   gyroByPlayer,
   gameId,
   onSelectGame,
+  onKick,
 }: {
   code: string;
   joinUrl: string;
@@ -22,6 +23,7 @@ export function HostHud({
   gyroByPlayer: Record<string, GyroSample>;
   gameId: string;
   onSelectGame: (gameId: string) => void;
+  onKick: (playerId: string) => void;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
   const games = listGames();
@@ -79,7 +81,7 @@ export function HostHud({
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 pb-1">
+      <div className="pointer-events-auto flex flex-wrap gap-2 pb-1">
         {controllers.length === 0 ? (
           <span className="bg-white/90 px-3 py-1 text-xs text-black/55">
             Waiting for a phone…
@@ -90,13 +92,20 @@ export function HostHud({
             return (
               <span
                 key={player.id}
-                className="px-3 py-1 text-xs text-white"
+                className="inline-flex items-center gap-2 px-3 py-1 text-xs text-white"
                 style={{ background: player.color }}
               >
                 {player.name}
                 {motion
                   ? `  ${motion.x.toFixed(2)} ${motion.y.toFixed(2)} ${motion.z.toFixed(2)}`
                   : ""}
+                <button
+                  type="button"
+                  onClick={() => onKick(player.id)}
+                  className="underline decoration-white/70 underline-offset-2"
+                >
+                  Kick
+                </button>
               </span>
             );
           })
