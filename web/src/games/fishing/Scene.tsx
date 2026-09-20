@@ -42,7 +42,7 @@ export function FishingScene({
 
   return (
     <>
-      <HostCanvas>
+      <HostCanvas backgroundSrc="/fishing/bckgrndwave.png">
         <River
           controllers={controllers}
           school={round.school}

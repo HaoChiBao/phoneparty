@@ -2,15 +2,13 @@
 
 import { OrthographicCamera, useTexture } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Player } from "@/lib/protocol";
 import { pawFromSample } from "./pointer";
 import { FIELD, fishPosition, LEAD_IN_MS, type Fish } from "./school";
 import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 
-const WATER_TOP = "#2f7fa8";
-const WATER_DEEP = "#12415e";
 const PAW_FUR = "#7a4a28";
 const PAW_PAD = "#3d2415";
 
@@ -24,60 +22,63 @@ function FitCamera() {
   );
 }
 
-function Water() {
-  const bands = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => index),
-    [],
-  );
-  return (
-    <group position={[0, 0, -5]}>
-      <mesh>
-        <planeGeometry args={[FIELD.width + 4, FIELD.height + 4]} />
-        <meshBasicMaterial color={WATER_DEEP} />
-      </mesh>
-      {/* lighter water toward the surface, so up and down read at a glance */}
-      {bands.map((index) => {
-        const t = index / (bands.length - 1);
-        const y = FIELD.height / 2 - (t * FIELD.height) / 1.6;
-        return (
-          <mesh key={index} position={[0, y, 0.01 + index * 0.001]}>
-            <planeGeometry args={[FIELD.width + 4, FIELD.height / 3]} />
-            <meshBasicMaterial color={WATER_TOP} transparent opacity={0.1} />
-          </mesh>
-        );
-      })}
-    </group>
-  );
-}
-
 function Ripples() {
   const group = useRef<THREE.Group>(null);
+  const elapsed = useRef(0);
+  const reducedMotion = useRef(false);
+  const size = useThree((state) => state.size);
+  // Match FitCamera's visible area, including extra water on wide/tall screens.
+  const aspect = size.width / Math.max(size.height, 1) || FIELD.width / FIELD.height;
+  const viewWidth = Math.max(FIELD.width, FIELD.height * aspect);
+  const viewHeight = Math.max(FIELD.height, FIELD.width / aspect);
+  const texture = useTexture("/fishing/wavestreak.png", (loaded) => {
+    loaded.colorSpace = THREE.SRGBColorSpace;
+  });
+  const image = texture.image as HTMLImageElement;
   const lines = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, index) => ({
-        y: (index / 13) * FIELD.height - FIELD.height / 2,
-        speed: 0.5 + ((index * 37) % 10) / 12,
-        width: 1.4 + ((index * 53) % 10) / 4,
+      Array.from({ length: 10 }, (_, index) => ({
+        lane: (index + 0.5) / 10 - 0.5,
+        speed: 0.45 + ((index * 37) % 10) / 15,
+        width: 6 + ((index * 53) % 10) / 2,
         offset: ((index * 91) % 100) / 100,
+        opacity: 0.22 + ((index * 17) % 5) * 0.035,
       })),
     [],
   );
-  useFrame(() => {
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => { reducedMotion.current = preference.matches; };
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+
+  useFrame((_, delta) => {
     if (!group.current) return;
-    const t = performance.now() / 1000;
+    if (!reducedMotion.current) elapsed.current += Math.min(delta, 0.05);
+    const t = elapsed.current;
     group.current.children.forEach((child, index) => {
       const line = lines[index];
-      const span = FIELD.width + 6;
-      const x = ((line.offset + t * line.speed * 0.06) % 1) * span - span / 2;
-      child.position.x = -x;
+      // Wrap only once the entire streak has left the viewport.
+      const span = viewWidth + line.width + 1;
+      child.position.x = span / 2 - (line.offset * span + t * line.speed) % span;
+      child.position.y = line.lane * viewHeight + Math.sin(t * 0.45 + index) * 0.12;
     });
   });
   return (
     <group ref={group} position={[0, 0, -4]}>
       {lines.map((line, index) => (
-        <mesh key={index} position={[0, line.y, 0]}>
-          <planeGeometry args={[line.width, 0.045]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.13} />
+        <mesh key={index}>
+          <planeGeometry args={[line.width, line.width * (image.height / image.width)]} />
+          <meshBasicMaterial
+            map={texture}
+            transparent
+            opacity={line.opacity}
+            depthWrite={false}
+            toneMapped={false}
+          />
         </mesh>
       ))}
     </group>
@@ -129,8 +130,9 @@ function School({
     <group ref={group}>
       {school.map((fish) => (
         <group key={fish.id} visible={false}>
-          {/* The uploaded art points up; turn its nose into the current. */}
-          <mesh geometry={geometry} rotation={[0, 0, Math.PI / 2]}>
+          {/* Rotate the upright art to swim left, then mirror its local X axis
+              to put its top back above its belly without reversing the nose. */}
+          <mesh geometry={geometry} rotation={[0, 0, Math.PI / 2]} scale={[-1, 1, 1]}>
             <meshBasicMaterial
               map={texture}
               transparent
@@ -262,7 +264,6 @@ export function River({
     <>
       <FitCamera />
       <ambientLight intensity={1} />
-      <Water />
       <Ripples />
       <School school={school} caughtIds={caughtIds} elapsedAt={elapsedAt} />
       <Splash at={splash} nowAt={nowAt} />

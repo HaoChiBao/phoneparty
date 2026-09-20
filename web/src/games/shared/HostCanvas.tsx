@@ -75,7 +75,13 @@ function FitView() {
   return null;
 }
 
-export function HostCanvas({ children }: { children: ReactNode }) {
+export function HostCanvas({
+  children,
+  backgroundSrc = FIELD_SRC,
+}: {
+  children: ReactNode;
+  backgroundSrc?: string;
+}) {
   const wrap = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -100,7 +106,7 @@ export function HostCanvas({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div ref={wrap} style={wrapStyle}>
+    <div ref={wrap} style={{ ...wrapStyle, backgroundImage: `url(${backgroundSrc})` }}>
       {ready ? (
         <Canvas
           className="absolute inset-0 block h-full w-full bg-transparent"
