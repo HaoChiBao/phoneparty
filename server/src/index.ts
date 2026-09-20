@@ -20,10 +20,18 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+function originMatches(allowed: string, origin: string) {
+  if (!allowed.includes("*")) return allowed === origin;
+  const pattern = allowed
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\\\*/g, ".*");
+  return new RegExp(`^${pattern}$`).test(origin);
+}
+
 function isAllowedOrigin(origin?: string) {
   if (!origin) return true;
   if (allowedOrigins.length === 0) return true;
-  return allowedOrigins.includes(origin);
+  return allowedOrigins.some((allowed) => originMatches(allowed, origin));
 }
 
 function writeCors(req: IncomingMessage, res: ServerResponse) {
@@ -91,11 +99,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, object, Socket
   {
     cors: {
       origin: (origin, callback) => {
-        if (isAllowedOrigin(origin)) {
-          callback(null, true);
-          return;
-        }
-        callback(new Error("Origin not allowed"));
+        callback(null, isAllowedOrigin(origin));
       },
     },
   },

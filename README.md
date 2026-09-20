@@ -21,7 +21,7 @@ iPhones only expose DeviceOrientation after a tap, and they expect HTTPS (or loc
 ## Deploy
 
 - **Web:** Vercel project rooted at `web`. Set `NEXT_PUBLIC_REALTIME_URL` to the Railway public URL.
-- **Realtime:** Railway deploys from the repo root and runs `npm run start --workspace=server`. Set `CORS_ORIGIN` to the Vercel origin (comma-separated if you have preview URLs).
+- **Realtime:** Railway deploys from the repo root with Railpack and starts `npm run start --workspace=server`. It should not run the Next.js build. Set `CORS_ORIGIN` to the Vercel origin; `*` wildcards work, for example `https://phoneparty*.vercel.app`.
 
 ## First test
 
