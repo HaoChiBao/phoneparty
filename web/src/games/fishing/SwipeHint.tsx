@@ -51,9 +51,14 @@ export function SwipeHint({
       <rect x="6" y="18" width="148" height="30" fill="#2f7fa8" opacity="0.35" />
 
       <g className="fish-swim">
-        <path
-          d="M74 62 q10 -8 22 -3 l9 -6 l-3 9 l3 9 l-9 -6 q-12 5 -22 -3 z"
-          fill="#d9714a"
+        <image
+          href="/fishing/fish.png"
+          x="79"
+          y="43"
+          width="22"
+          height="38"
+          preserveAspectRatio="xMidYMid meet"
+          transform="rotate(-90 90 62)"
         />
       </g>
 

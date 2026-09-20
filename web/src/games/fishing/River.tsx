@@ -1,6 +1,6 @@
 "use client";
 
-import { OrthographicCamera } from "@react-three/drei";
+import { OrthographicCamera, useTexture } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -11,23 +11,8 @@ import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 
 const WATER_TOP = "#2f7fa8";
 const WATER_DEEP = "#12415e";
-const SALMON = "#d9714a";
-const SALMON_BACK = "#8f4430";
 const PAW_FUR = "#7a4a28";
 const PAW_PAD = "#3d2415";
-
-/** Salmon silhouette, nose pointing left, in a 1-unit body. */
-function salmonShape() {
-  const shape = new THREE.Shape();
-  shape.moveTo(-0.62, 0);
-  shape.quadraticCurveTo(-0.22, 0.31, 0.24, 0.18);
-  shape.lineTo(0.62, 0.34);
-  shape.lineTo(0.5, 0);
-  shape.lineTo(0.62, -0.34);
-  shape.lineTo(0.24, -0.18);
-  shape.quadraticCurveTo(-0.22, -0.31, -0.62, 0);
-  return shape;
-}
 
 /** Fits the 16x9 river to whatever shape the TV is, without distortion. */
 function FitCamera() {
@@ -108,7 +93,13 @@ function School({
   elapsedAt: () => number;
 }) {
   const group = useRef<THREE.Group>(null);
-  const geometry = useMemo(() => new THREE.ShapeGeometry(salmonShape()), []);
+  const texture = useTexture("/fishing/fish.png", (loaded) => {
+    loaded.colorSpace = THREE.SRGBColorSpace;
+  });
+  const geometry = useMemo(() => {
+    const image = texture.image as HTMLImageElement;
+    return new THREE.PlaneGeometry(1.4 * (image.width / image.height), 1.4);
+  }, [texture]);
 
   useFrame(() => {
     if (!group.current) return;
@@ -137,15 +128,15 @@ function School({
     <group ref={group}>
       {school.map((fish) => (
         <group key={fish.id} visible={false}>
-          <mesh geometry={geometry}>
-            <meshBasicMaterial color={SALMON} />
-          </mesh>
-          <mesh geometry={geometry} position={[0, 0.07, -0.01]} scale={[0.96, 0.6, 1]}>
-            <meshBasicMaterial color={SALMON_BACK} />
-          </mesh>
-          <mesh position={[-0.42, 0.07, 0.01]}>
-            <circleGeometry args={[0.045, 10]} />
-            <meshBasicMaterial color="#14202a" />
+          {/* The uploaded art points up; turn its nose into the current. */}
+          <mesh geometry={geometry} rotation={[0, 0, Math.PI / 2]}>
+            <meshBasicMaterial
+              map={texture}
+              transparent
+              alphaTest={0.01}
+              depthWrite={false}
+              toneMapped={false}
+            />
           </mesh>
         </group>
       ))}
