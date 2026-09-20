@@ -1,14 +1,30 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Player } from "@/lib/protocol";
 
-const APPLE = "#c43b32";
 const FALLING_POOL = 16;
 const PILE_MAX = 26;
 const GRAVITY = 16;
+
+/** Upright cutouts keep the uploaded artwork readable from the fixed TV camera. */
+function AppleArt({ texture }: { texture: THREE.Texture }) {
+  const image = texture.image as HTMLImageElement;
+  return (
+    <>
+      <planeGeometry args={[0.32 * (image.width / image.height), 0.32]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        alphaTest={0.1}
+        toneMapped={false}
+      />
+    </>
+  );
+}
 
 /** Stable scatter so a pile looks tossed but never reshuffles as it grows. */
 function scatter(index: number) {
@@ -24,11 +40,13 @@ function Tree({
   apples,
   x,
   isLeader,
+  appleTexture,
 }: {
   player: Player;
   apples: number;
   x: number;
   isLeader: boolean;
+  appleTexture: THREE.Texture;
 }) {
   const canopy = useRef<THREE.Group>(null);
   const drops = useRef<THREE.InstancedMesh>(null);
@@ -126,35 +144,33 @@ function Tree({
           <sphereGeometry args={[0.68, 18, 14]} />
           <meshStandardMaterial color="#276b31" roughness={0.74} />
         </mesh>
+        {/* Flat artwork sits in front of the foliage, not inside its spheres. */}
         {[
-          [-0.55, 0.35, 0.8],
-          [0.5, 0.25, 0.75],
-          [0.05, 1.4, 0.7],
-          [-0.8, 1.05, 0.2],
-          [0.85, 1.1, 0.15],
-        ].map(([ax, ay, az]) => (
-          <mesh key={`${ax}-${ay}`} position={[ax, ay, az]} castShadow>
-            <sphereGeometry args={[0.15, 12, 10]} />
-            <meshStandardMaterial color={APPLE} roughness={0.4} />
+          [-0.55, 0.35],
+          [0.5, 0.25],
+          [0.05, 1.4],
+          [-0.8, 1.05],
+          [0.85, 1.1],
+        ].map(([ax, ay]) => (
+          <mesh key={`${ax}-${ay}`} position={[ax, ay, 1.2]} castShadow>
+            <AppleArt texture={appleTexture} />
           </mesh>
         ))}
       </group>
 
       {/* apples on the way down */}
       <instancedMesh ref={drops} args={[undefined, undefined, FALLING_POOL]} castShadow>
-        <sphereGeometry args={[0.15, 12, 10]} />
-        <meshStandardMaterial color={APPLE} roughness={0.4} />
+        <AppleArt texture={appleTexture} />
       </instancedMesh>
 
       {/* what has already been shaken loose */}
       {pile.map((spot, index) => (
         <mesh
           key={index}
-          position={[spot.x, 0.15 + Math.floor(index / 9) * 0.16, spot.z + 0.55]}
+          position={[spot.x, 0.16 + Math.floor(index / 9) * 0.16, spot.z + 0.55]}
           castShadow
         >
-          <sphereGeometry args={[0.15, 12, 10]} />
-          <meshStandardMaterial color={APPLE} roughness={0.4} />
+          <AppleArt texture={appleTexture} />
         </mesh>
       ))}
 
@@ -180,6 +196,9 @@ export function Grove({
   apples: Record<string, number>;
   leaders: string[];
 }) {
+  const appleTexture = useTexture("/shake/apple.png", (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+  });
   const spacing = 3.4;
   return (
     <group>
@@ -190,6 +209,7 @@ export function Grove({
           apples={apples[player.id] ?? 0}
           x={(index - (order.length - 1) / 2) * spacing}
           isLeader={leaders.includes(player.id)}
+          appleTexture={appleTexture}
         />
       ))}
     </group>
