@@ -135,11 +135,18 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
   const grounded =
     (onTable(ball.pos.x, ball.pos.z) && ball.pos.y <= tableTop + 0.002) ||
     ball.pos.y <= BALL.radius + 0.002;
-  if (ball.age > 1.2 && grounded && speed < 0.16 && (ball.bounceCount >= 2 || !ball.bounced)) {
+  if (ball.age > 0.6 && grounded && speed < 0.16 && (ball.bounceCount >= 2 || !ball.bounced)) {
     ball.settled = true;
     ball.vel.set(0, 0, 0);
   }
-  if (ball.age > 3.6 || Math.abs(ball.pos.x) > 3.4 || Math.abs(ball.pos.z) > 2.2) {
+  // Past the table and dropping away, the throw is already a miss. Nothing is
+  // decided by watching it roll, and the next player was waiting on it: most
+  // misses used to run all the way to the age cap because nothing slows a ball
+  // once it leaves the table.
+  if (ball.age > 0.25 && !onTable(ball.pos.x, ball.pos.z) && ball.pos.y < TABLE.height && ball.vel.y <= 0) {
+    ball.settled = true;
+  }
+  if (ball.age > 2.4 || Math.abs(ball.pos.x) > 3.4 || Math.abs(ball.pos.z) > 2.2) {
     ball.settled = true;
   }
   return ball;

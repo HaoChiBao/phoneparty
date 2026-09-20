@@ -33,7 +33,7 @@ import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 import { actionOn, PONG_SYNC, viewFromMatch } from "./view";
 
 const REMATCH_MS = 7000;
-const REVEAL_MS = 1000;
+const REVEAL_MS = 450;
 
 const TABLE_GREEN = "#2db85a";
 const TABLE_APRON = "#1a7a44";
@@ -323,9 +323,13 @@ function GameLoop({
       acc.current = 0;
     }
     acc.current += Math.min(Math.max(dt, 0), 0.05);
-    const step = 1 / 60;
+    // The cup mouth is 7cm across. At 1/60 a 5m/s throw moves 8cm per step, so
+    // the ball could be outside the opening on one sample and past it on the
+    // next — measured at 17% of genuine sinks missed, plus 3% credited to the
+    // wrong cup. Substepping takes that to 2% and 0%.
+    const step = 1 / 480;
     let guard = 0;
-    while (acc.current >= step && !ball.settled && guard < 8) {
+    while (acc.current >= step && !ball.settled && guard < 48) {
       stepBall(ball, matchRef.current.cups, step);
       acc.current -= step;
       guard += 1;

@@ -70,11 +70,23 @@ function readPose(data: unknown): CalibratedPose | null {
   return { alpha, beta, gamma, x: 0, y: 0, z: 0 };
 }
 
+/**
+ * Archers alternate: whoever has taken the fewest arrows shoots next, ties
+ * going to join order. So everyone shoots their first arrow, then their
+ * second, rather than one archer taking all three while the rest watch.
+ */
 function nextUp(order: Player[], shots: Record<string, Shot[]>) {
-  return (
-    order.find((player) => (shots[player.id]?.length ?? 0) < ARROWS_PER_PLAYER) ??
-    null
-  );
+  let next: Player | null = null;
+  let fewest = Number.POSITIVE_INFINITY;
+  for (const player of order) {
+    const taken = shots[player.id]?.length ?? 0;
+    if (taken >= ARROWS_PER_PLAYER) continue;
+    if (taken < fewest) {
+      fewest = taken;
+      next = player;
+    }
+  }
+  return next;
 }
 
 type Progress = {
