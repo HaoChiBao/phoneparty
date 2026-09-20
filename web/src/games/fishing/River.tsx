@@ -17,6 +17,7 @@ const PAW_PAD = "#3d2415";
 /** Fits the 16x9 river to whatever shape the TV is, without distortion. */
 function FitCamera() {
   const size = useThree((state) => state.size);
+  if (size.width < 2 || size.height < 2) return null;
   const zoom = Math.min(size.width / FIELD.width, size.height / FIELD.height);
   return (
     <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={zoom} near={0.1} far={100} />

@@ -1,9 +1,8 @@
 "use client";
 
-import { ContactShadows, PerspectiveCamera, useTexture } from "@react-three/drei";
+import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
-  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -144,16 +143,10 @@ function Table() {
 }
 
 function GrassFloor() {
-  const map = useTexture("/field.jpg");
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.wrapS = THREE.RepeatWrapping;
-  map.wrapT = THREE.ClampToEdgeWrapping;
-  map.repeat.set(2.6, 0.36);
-  map.offset.set(0, 0.02);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[28, 22]} />
-      <meshStandardMaterial map={map} roughness={0.95} />
+      <MatteMaterial color="#5dad3a" />
     </mesh>
   );
 }
@@ -593,9 +586,7 @@ export function BeerPongScene({
         <ambientLight intensity={0.95} />
         <ShadowLight position={[2.2, 5.4, 3.2]} intensity={1.15} coverage={6} />
         <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
-        <Suspense fallback={null}>
-          <GrassFloor />
-        </Suspense>
+        <GrassFloor />
         <ContactShadows
           position={[0, 0.015, 0]}
           opacity={0.3}

@@ -10,4 +10,6 @@ export const fishingGame: GameDefinition = {
   PadExtra: FishingPad,
   hideAimPad: true,
   motionLabels: [{ id: "swipe", title: "bear swipe" }],
+  howToPlay:
+    "Scan the QR and enable motion. Point the camera at the TV to move your paw. Line up a salmon and jab the phone straight down to swipe. Thirty seconds, most fish wins.",
 };

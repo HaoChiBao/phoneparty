@@ -1,6 +1,5 @@
 "use client";
 
-import { Grid } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
@@ -26,24 +25,9 @@ function Stage({
   return (
     <>
       <RangeCamera drawing={drawing} shotKey={shotKey} />
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[3, 7, 4]} intensity={1.05} />
-      <pointLight position={[0, 4, TARGET_Z + 3]} intensity={9} color={ACCENT} distance={16} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[26, 30]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-      <Grid
-        args={[26, 30]}
-        cellSize={0.5}
-        cellThickness={0.45}
-        cellColor="#d7dce6"
-        sectionSize={2}
-        sectionThickness={1}
-        sectionColor="#111111"
-        fadeDistance={30}
-        position={[0, 0.01, 0]}
-      />
+      <ambientLight intensity={1.05} />
+      <directionalLight position={[3, 7, 4]} intensity={1.15} />
+      <pointLight position={[0, 4, TARGET_Z + 3]} intensity={6} color={ACCENT} distance={16} />
       {children}
     </>
   );

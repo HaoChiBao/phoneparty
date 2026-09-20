@@ -2,8 +2,6 @@ import { archeryGame } from "./archery";
 import { beerPongGame } from "./beer-pong";
 import { fishingGame } from "./fishing";
 import { hammerGame } from "./hammer";
-import { rangeGame } from "./range";
-import { sandboxGame } from "./sandbox";
 import { shakeGame } from "./shake";
 import type { GameDefinition } from "./types";
 
@@ -12,9 +10,7 @@ const games: GameDefinition[] = [
   shakeGame,
   archeryGame,
   fishingGame,
-  rangeGame,
   beerPongGame,
-  sandboxGame,
 ];
 
 export function listGames() {
@@ -22,7 +18,7 @@ export function listGames() {
 }
 
 export function getGame(id: string | null | undefined): GameDefinition {
-  return games.find((game) => game.id === id) ?? rangeGame;
+  return games.find((game) => game.id === id) ?? hammerGame;
 }
 
 export function isKnownGame(id: string) {
