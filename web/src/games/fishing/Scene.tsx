@@ -43,7 +43,7 @@ export function FishingScene({
         />
       </HostCanvas>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-24">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-32">
         <div className="flex items-end gap-6">
           <div className="rounded-2xl bg-white/92 px-5 py-3 text-center">
             <p className="text-[11px] uppercase tracking-[0.22em] text-accent">

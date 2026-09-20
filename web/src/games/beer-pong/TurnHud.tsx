@@ -58,7 +58,7 @@ export function TurnHud({
 
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 top-5 z-10 flex justify-center px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-32 z-10 flex justify-center px-4">
         <div className="flex items-end gap-6">
           <p className="text-5xl font-bold tabular-nums tracking-tight text-accent">
             {aLeft}

@@ -46,7 +46,7 @@ export function ShakeScene({ controllers, actionsByPlayer }: GameSceneProps) {
       </HostCanvas>
 
       {/* the counter, up top */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-24">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-32">
         <div className="flex flex-col items-center gap-3 text-center">
           {phase === "shaking" ? (
             <div className="rounded-2xl bg-white/92 px-6 py-3">

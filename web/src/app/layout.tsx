@@ -16,6 +16,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   preload("/field.jpg", { as: "image" });
+  preload("/bearlympics.png", { as: "image" });
   return (
     <html lang="en" className="h-full">
       <body className="min-h-full bg-white font-sans text-black antialiased">

@@ -12,5 +12,5 @@ export const beerPongGame: GameDefinition = {
   showCalibrate: true,
   motionLabels: [{ id: "flick", title: "beer pong flick" }],
   howToPlay:
-    "Scan the QR, enable motion, and calibrate at the TV. When your phone is green, flick toward the cups. Take turns. Clear the other rack.",
+    "Scan the QR, enable motion, and calibrate at the TV. When your phone is green, flick toward the cups. Sink a cup and throw again. A miss passes the turn.",
 };

@@ -211,6 +211,13 @@ function advanceTurn(match: Match, controllers: Player[], made: boolean): Match 
   return next;
 }
 
+function stayOnTurn(match: Match, controllers: Player[], made: boolean): Match {
+  const withVolley = recordVolley(match, made);
+  const next = { ...withVolley, phase: "aim" as const };
+  next.message = throwLine(next, controllers);
+  return next;
+}
+
 function nextOnTeam(match: Match, team: TeamId) {
   for (let step = 1; step <= match.order.length; step++) {
     const index = (match.turnIndex + step) % match.order.length;
@@ -296,7 +303,7 @@ export function applySink(
     const target = match.redemption === "a" ? "b" : "a";
     const left = target === "a" ? aLeft : bLeft;
     if (left === 0) return beginOvertime(next, controllers);
-    return advanceTurn(next, controllers, true);
+    return stayOnTurn(next, controllers, true);
   }
 
   if (aLeft === 0 || bLeft === 0) {
@@ -307,7 +314,8 @@ export function applySink(
     return beginRedemption(next, controllers, trailing);
   }
 
-  return advanceTurn(next, controllers, true);
+  // A make keeps the same shooter. Misses are what pass the ball.
+  return stayOnTurn(next, controllers, true);
 }
 
 export function applyMiss(match: Match, controllers: Player[]): Match {

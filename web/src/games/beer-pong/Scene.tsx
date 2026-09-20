@@ -48,9 +48,9 @@ type PendingShot = {
 };
 
 const REMATCH_MS = 7000;
-// Keep the made cup readable, but do not make the next player wait through a
-// long celebration after the ball has already settled.
-const REVEAL_MS = 180;
+// Hold the sparkle long enough to read, then the cup shrinks off on its own.
+const REVEAL_MS = 420;
+const SHRINK_SEC = 0.55;
 
 const TABLE_GREEN = "#2db85a";
 const TABLE_APRON = "#1a7a44";
@@ -142,28 +142,112 @@ function Table() {
   );
 }
 
-function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
-  const light = useRef<THREE.PointLight>(null);
-  const beams = useRef<THREE.Group>(null);
+const SPARKLE_COUNT = 28;
+
+function CupSparkles({ active }: { active: boolean }) {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const seeds = useMemo(
+    () =>
+      Array.from({ length: SPARKLE_COUNT }, (_, i) => ({
+        a: (i / SPARKLE_COUNT) * Math.PI * 2,
+        r: CUP.rimRadius + 0.016 + (i % 4) * 0.007,
+        y: -0.01 + (i % 6) * 0.016,
+        s: 0.0036 + (i % 5) * 0.0018,
+        speed: 2.1 + (i % 7) * 0.45,
+        phase: i * 0.73,
+      })),
+    [],
+  );
+
   useFrame(({ clock }) => {
-    if (!glowing || !cup.live) return;
-    const pulse = 0.7 + Math.sin(clock.elapsedTime * 11) * 0.3;
-    if (light.current) light.current.intensity = 2.8 + pulse * 2.4;
-    if (beams.current) beams.current.position.y = pulse * 0.03;
+    if (!mesh.current) return;
+    const t = clock.elapsedTime;
+    for (let i = 0; i < SPARKLE_COUNT; i++) {
+      const p = seeds[i];
+      const twinkle = 0.5 + 0.5 * Math.sin(t * p.speed + p.phase);
+      const spin = t * 0.85;
+      dummy.position.set(
+        Math.cos(p.a + spin) * p.r,
+        CUP.height / 2 + p.y + Math.sin(t * p.speed * 0.7 + p.phase) * 0.014,
+        Math.sin(p.a + spin) * p.r,
+      );
+      dummy.scale.setScalar(active ? p.s * (0.35 + twinkle * 1.4) : 0);
+      dummy.updateMatrix();
+      mesh.current.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.current.instanceMatrix.needsUpdate = true;
   });
-  if (!cup.live) return null;
+
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, SPARKLE_COUNT]} frustumCulled={false}>
+      <sphereGeometry args={[1, 8, 8]} />
+      <meshBasicMaterial
+        color="#fff8d8"
+        transparent
+        opacity={0.95}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </instancedMesh>
+  );
+}
+
+function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
+  const group = useRef<THREE.Group>(null);
+  const light = useRef<THREE.PointLight>(null);
+  const halo = useRef<THREE.Mesh>(null);
+  const shrink = useRef(cup.live ? 1 : 0);
+  const [gone, setGone] = useState(!cup.live);
+  const sinking = !cup.live;
+  const showGlow = glowing || sinking;
   const h = CUP.height;
   const innerRim = CUP.rimRadius - 0.0026;
   const innerBase = CUP.baseRadius - 0.0022;
+
+  useFrame(({ clock }, dt) => {
+    if (cup.live) {
+      shrink.current = 1;
+      if (gone) setGone(false);
+    } else {
+      shrink.current = Math.max(0, shrink.current - dt / SHRINK_SEC);
+      if (shrink.current <= 0.001) {
+        if (light.current) light.current.intensity = 0;
+        if (!gone) setGone(true);
+        return;
+      }
+    }
+    if (!group.current) return;
+    const s = shrink.current * shrink.current;
+    group.current.visible = s > 0.001;
+    group.current.scale.setScalar(s);
+    group.current.position.set(cup.x, TABLE.height + (h / 2) * s, cup.z);
+
+    if (!showGlow) {
+      if (light.current) light.current.intensity = 0;
+      return;
+    }
+    const pulse = 0.7 + Math.sin(clock.elapsedTime * 11) * 0.3;
+    if (light.current) light.current.intensity = 2.4 + pulse * 2.2;
+    if (halo.current) {
+      const mat = halo.current.material;
+      if (!Array.isArray(mat) && "opacity" in mat) {
+        mat.opacity = 0.28 + pulse * 0.22;
+      }
+    }
+  });
+
+  if (gone && !cup.live) return null;
+
   return (
-    <group position={[cup.x, TABLE.height + h / 2, cup.z]}>
+    <group ref={group} position={[cup.x, TABLE.height + h / 2, cup.z]}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, h, 28, 1, true]} />
         <meshStandardMaterial
           color={CUP_RED}
           roughness={0.36}
-          emissive={glowing ? GLOW : "#000000"}
-          emissiveIntensity={glowing ? 1.6 : 0}
+          emissive={showGlow ? GLOW : "#000000"}
+          emissiveIntensity={showGlow ? 1.6 : 0}
         />
       </mesh>
       <mesh>
@@ -172,8 +256,8 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
           color={CUP_WHITE}
           side={THREE.BackSide}
           roughness={0.18}
-          emissive={glowing ? GLOW : "#000000"}
-          emissiveIntensity={glowing ? 2.1 : 0}
+          emissive={showGlow ? GLOW : "#000000"}
+          emissiveIntensity={showGlow ? 2.1 : 0}
         />
       </mesh>
       <mesh castShadow position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -181,8 +265,8 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
         <meshStandardMaterial
           color={CUP_RED}
           roughness={0.36}
-          emissive={glowing ? GLOW : "#000000"}
-          emissiveIntensity={glowing ? 1.2 : 0}
+          emissive={showGlow ? GLOW : "#000000"}
+          emissiveIntensity={showGlow ? 1.2 : 0}
         />
       </mesh>
       <mesh position={[0, -h / 2 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -190,8 +274,8 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
         <meshStandardMaterial
           color={CUP_WHITE}
           roughness={0.18}
-          emissive={glowing ? GLOW : "#000000"}
-          emissiveIntensity={glowing ? 2.4 : 0}
+          emissive={showGlow ? GLOW : "#000000"}
+          emissiveIntensity={showGlow ? 2.4 : 0}
         />
       </mesh>
       <mesh position={[0, h / 2 - 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -199,42 +283,39 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
         <meshStandardMaterial
           color={CUP_WHITE}
           roughness={0.2}
-          emissive={glowing ? GLOW : "#000000"}
-          emissiveIntensity={glowing ? 1.8 : 0}
+          emissive={showGlow ? GLOW : "#000000"}
+          emissiveIntensity={showGlow ? 1.8 : 0}
         />
       </mesh>
-      {glowing ? (
+      {showGlow ? (
         <>
-          <pointLight ref={light} color={GLOW} intensity={5.4} distance={3.4} position={[0, 0.18, 0]} />
-          <pointLight color="#fff4b8" intensity={2.2} distance={1.6} position={[0, 0.55, 0]} />
-          <spotLight
-            color={GLOW}
-            intensity={6.5}
-            distance={3.2}
-            angle={0.55}
-            penumbra={0.45}
-            position={[0, 0.02, 0]}
-          >
-            <object3D attach="target" position={[0, 1.4, 0]} />
-          </spotLight>
-          <group ref={beams} position={[0, h / 2, 0]}>
-            <mesh>
-              <cylinderGeometry args={[0.012, 0.068, 0.92, 14, 1, true]} />
-              <meshBasicMaterial color={GLOW} transparent opacity={0.48} side={THREE.DoubleSide} />
-            </mesh>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <mesh key={i} rotation={[0.28, (i / 8) * Math.PI * 2, 0]} position={[0, 0.34, 0]}>
-                <coneGeometry args={[0.018, 0.78, 8, 1, true]} />
-                <meshBasicMaterial color="#fff4b0" transparent opacity={0.38} side={THREE.DoubleSide} />
-              </mesh>
-            ))}
-            {[0.16, 0.38, 0.6, 0.82].map((y) => (
-              <mesh key={y} position={[0.01, y, 0.01]}>
-                <sphereGeometry args={[0.014, 10, 10]} />
-                <meshBasicMaterial color="#fff8d2" />
-              </mesh>
-            ))}
-          </group>
+          <mesh>
+            <cylinderGeometry
+              args={[CUP.rimRadius + 0.016, CUP.baseRadius + 0.012, h + 0.028, 24, 1, true]}
+            />
+            <meshBasicMaterial
+              color={GLOW}
+              transparent
+              opacity={0.22}
+              side={THREE.DoubleSide}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+          <mesh ref={halo} position={[0, h / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[CUP.rimRadius - 0.006, CUP.rimRadius + 0.034, 28]} />
+            <meshBasicMaterial
+              color="#fff4b0"
+              transparent
+              opacity={0.5}
+              side={THREE.DoubleSide}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+          <pointLight ref={light} color={GLOW} intensity={5} distance={2.4} position={[0, 0.12, 0]} />
+          <pointLight color="#fff4b8" intensity={1.6} distance={1.1} position={[0, 0.22, 0]} />
+          <CupSparkles active />
         </>
       ) : null}
     </group>

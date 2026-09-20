@@ -39,6 +39,11 @@ export function HostHud({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-5">
+      <img
+        src="/bearlympics.png"
+        alt="Bearlympics"
+        className="pointer-events-none absolute left-1/2 top-4 z-[1] h-[clamp(3.25rem,7.5vw,6.25rem)] w-auto max-w-[46vw] -translate-x-1/2 object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.45)]"
+      />
       <div className="flex items-start justify-between gap-4">
         {open ? (
           <>
