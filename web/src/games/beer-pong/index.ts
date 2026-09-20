@@ -8,4 +8,5 @@ export const beerPongGame: GameDefinition = {
   blurb: "Two sides, ten cups. Take turns. Clear the other rack.",
   Scene: BeerPongScene,
   PadExtra: BeerPongPad,
+  motionLabels: [{ id: "flick", title: "beer pong flick" }],
 };

@@ -11,6 +11,7 @@ import {
   setDeviceQuaternion,
   stepPosition,
 } from "@/lib/orientation";
+import { MotionRecordPad } from "@/components/MotionRecordPad";
 import { getGame } from "@/games/catalog";
 import type { GyroSample } from "@/lib/protocol";
 import { usePartySocket } from "@/lib/usePartySocket";
@@ -30,6 +31,7 @@ export function ControllerPad({ code }: { code: string }) {
   } = usePartySocket(code, "controller");
   const [motionReady, setMotionReady] = useState(false);
   const [motionError, setMotionError] = useState<string | null>(null);
+  const [capturingMotion, setCapturingMotion] = useState(false);
   const [sample, setSample] = useState<GyroSample | null>(null);
   const latest = useRef<GyroSample | null>(null);
   const position = useRef(createPositionState());
@@ -200,6 +202,14 @@ export function ControllerPad({ code }: { code: string }) {
             selfId={selfId}
             motionReady={motionReady}
             sample={sample}
+            capturingMotion={capturingMotion}
+          />
+        ) : null}
+        {!kicked ? (
+          <MotionRecordPad
+            game={game}
+            motionReady={motionReady}
+            onCapturingChange={setCapturingMotion}
           />
         ) : null}
       </div>
@@ -232,7 +242,7 @@ export function ControllerPad({ code }: { code: string }) {
         )}
         <p className="text-center text-xs text-black/40">
           {hideAimPad
-            ? "Hold the phone flat with the rear camera facing the floor. iPhones need HTTPS and a tap before sensors stream."
+            ? "Hold the phone like a paw. Swing when the screen goes green. iPhones need HTTPS and a tap before sensors stream."
             : "Aim with the front of the phone, the camera-facing side. iPhones need HTTPS and a tap before sensors stream. On a computer, drag the remote."}
         </p>
       </div>

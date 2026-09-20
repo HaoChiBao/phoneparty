@@ -23,6 +23,14 @@ export type GamePadProps = {
   selfId: string | null;
   motionReady: boolean;
   sample: GyroSample | null;
+  // True while the shared recorder is capturing a clip. Pads must not fire a
+  // scored action from the same motion.
+  capturingMotion?: boolean;
+};
+
+export type MotionLabel = {
+  id: string;
+  title: string;
 };
 
 export type GameDefinition = {
@@ -33,4 +41,11 @@ export type GameDefinition = {
   PadExtra?: ComponentType<GamePadProps>;
   // Games that do not aim at the TV can drop the shared aim pad and its copy.
   hideAimPad?: boolean;
+  // Gesture names for the shared motion recorder ("bear hit", "beer pong flick").
+  motionLabels?: MotionLabel[];
 };
+
+export function motionLabelsFor(game: GameDefinition): MotionLabel[] {
+  if (game.motionLabels?.length) return game.motionLabels;
+  return [{ id: "move", title: `${game.title} move` }];
+}

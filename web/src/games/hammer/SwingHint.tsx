@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * Looping hint for the hammer motion: hold the phone flat with the rear camera
- * facing the floor, then swing it straight down. Plain SVG + CSS so it renders
- * on the phone pad and on the TV overlay without a 3D canvas.
+ * Looping hint: hold the phone like a paw and swing down at the tree.
+ * Plain SVG + CSS so it renders on the phone pad and the TV overlay.
  */
 export function SwingHint({
   size = 168,
@@ -18,70 +17,60 @@ export function SwingHint({
       width={size}
       height={(size * 120) / 160}
       role="img"
-      aria-label="Hold the phone flat with the camera facing the floor, then swing down"
+      aria-label="Hold the phone like a paw, then swing down at the tree"
       style={{ display: "block" }}
     >
       <style>{`
-        @keyframes hammer-swing {
-          0%, 8%   { transform: rotate(-62deg); }
-          38%      { transform: rotate(-62deg); }
-          52%      { transform: rotate(4deg); }
-          60%      { transform: rotate(-6deg); }
-          68%, 100%{ transform: rotate(-62deg); }
+        @keyframes paw-swing {
+          0%, 8%   { transform: rotate(-58deg); }
+          38%      { transform: rotate(-58deg); }
+          52%      { transform: rotate(8deg); }
+          60%      { transform: rotate(-4deg); }
+          68%, 100%{ transform: rotate(-58deg); }
         }
-        @keyframes hammer-impact {
+        @keyframes paw-impact {
           0%, 50%  { opacity: 0; transform: scale(0.6); }
           56%      { opacity: 1; transform: scale(1); }
           72%, 100%{ opacity: 0; transform: scale(1.35); }
         }
-        @keyframes hammer-arc {
-          0%, 38%  { stroke-dashoffset: 92; opacity: 0.25; }
-          52%      { stroke-dashoffset: 0; opacity: 1; }
-          70%, 100%{ stroke-dashoffset: 0; opacity: 0; }
+        @keyframes paw-apple {
+          0%, 50%  { transform: translate(0, 0); opacity: 0; }
+          58%      { opacity: 1; }
+          100%     { transform: translate(6px, 22px); opacity: 0; }
         }
-        .hammer-arm   { animation: hammer-swing 2.4s cubic-bezier(.4,0,.2,1) infinite;
-                        transform-origin: 28px 104px; }
-        .hammer-burst { animation: hammer-impact 2.4s ease-out infinite;
-                        transform-origin: 112px 100px; }
-        .hammer-arc   { animation: hammer-arc 2.4s ease-in-out infinite;
-                        stroke-dasharray: 92; }
+        .paw-arm    { animation: paw-swing 2.4s cubic-bezier(.4,0,.2,1) infinite;
+                      transform-origin: 30px 102px; }
+        .paw-burst  { animation: paw-impact 2.4s ease-out infinite;
+                      transform-origin: 108px 78px; }
+        .paw-apple  { animation: paw-apple 2.4s ease-in infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .hammer-arm, .hammer-burst, .hammer-arc { animation: none; }
-          .hammer-arc { stroke-dashoffset: 0; }
+          .paw-arm, .paw-burst, .paw-apple { animation: none; }
         }
       `}</style>
 
+      <rect x="100" y="54" width="18" height="60" rx="4" fill="#6b4728" />
+      <circle cx="109" cy="40" r="22" fill="#2f7a38" />
+      <circle cx="124" cy="48" r="14" fill="#3c8f44" />
+      <circle cx="96" cy="48" r="13" fill="#276b31" />
+
       <path
-        className="hammer-arc"
-        d="M104 26 A 76 76 0 0 1 122 96"
+        className="paw-arm"
+        d="M30 102 C 58 100, 82 92, 100 78"
         fill="none"
-        stroke={accent}
-        strokeWidth="2.5"
+        stroke="#7a4a28"
+        strokeWidth="9"
         strokeLinecap="round"
       />
-      <g className="hammer-arm">
-        <line
-          x1="28"
-          y1="104"
-          x2="104"
-          y2="104"
-          stroke="#111111"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-        {/* the phone is the hammer head; the dot is the rear camera, aimed down */}
-        <rect
-          x="94"
-          y="88"
-          width="34"
-          height="24"
-          rx="5"
-          fill="#111111"
-        />
-        <circle cx="121" cy="107" r="3.4" fill={accent} />
+      <g className="paw-arm">
+        <ellipse cx="104" cy="74" rx="14" ry="10" fill="#7a4a28" />
+        <ellipse cx="104" cy="76" rx="7" ry="4" fill="#5a3318" />
       </g>
-      <g className="hammer-burst">
-        <circle cx="112" cy="100" r="14" fill="none" stroke={accent} strokeWidth="3" />
+      <g className="paw-burst">
+        <circle cx="108" cy="78" r="13" fill="none" stroke={accent} strokeWidth="3" />
+      </g>
+      <g className="paw-apple">
+        <circle cx="118" cy="42" r="4.5" fill={accent} />
+        <circle cx="102" cy="36" r="3.5" fill="#c43b32" />
       </g>
       <line
         x1="10"

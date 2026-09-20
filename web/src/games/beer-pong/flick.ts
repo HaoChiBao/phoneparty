@@ -1,3 +1,5 @@
+import { ACTION_TUNE_EVENT, loadActionTune } from "@/lib/actionTune";
+
 export type FlickPayload = {
   power: number;
   peak: number;
@@ -7,6 +9,27 @@ const START = 11;
 const HOLD = 7;
 const MIN_PEAK = 12.5;
 const COOLDOWN_MS = 850;
+
+let cachedFlickTune: ReturnType<typeof loadActionTune> | undefined;
+
+if (typeof window !== "undefined") {
+  window.addEventListener(ACTION_TUNE_EVENT, () => {
+    cachedFlickTune = undefined;
+  });
+}
+
+export function flickGates() {
+  if (cachedFlickTune === undefined) {
+    cachedFlickTune = loadActionTune("beer-pong", "flick");
+  }
+  const tune = cachedFlickTune;
+  return {
+    start: tune?.startMag ?? START,
+    hold: HOLD,
+    minPeak: tune?.minPeak ?? MIN_PEAK,
+    cooldown: COOLDOWN_MS,
+  };
+}
 
 export function createFlickState() {
   return {
@@ -48,12 +71,13 @@ export function stepFlick(
   now: number,
 ): FlickPayload | null {
   const mag = Math.hypot(accel.x, accel.y, accel.z);
-  if (now - state.lastFire < COOLDOWN_MS) {
+  const gates = flickGates();
+  if (now - state.lastFire < gates.cooldown) {
     state.armed = false;
     state.peak = 0;
     return null;
   }
-  if (mag >= START) {
+  if (mag >= gates.start) {
     if (!state.armed) {
       state.armed = true;
       state.started = now;
@@ -63,12 +87,12 @@ export function stepFlick(
     }
     return null;
   }
-  if (!state.armed || mag > HOLD) return null;
+  if (!state.armed || mag > gates.hold) return null;
   const elapsed = now - state.started;
   const peak = state.peak;
   state.armed = false;
   state.peak = 0;
-  if (peak < MIN_PEAK || elapsed < 40 || elapsed > 900) return null;
+  if (peak < gates.minPeak || elapsed < 40 || elapsed > 900) return null;
   state.lastFire = now;
   return {
     peak,

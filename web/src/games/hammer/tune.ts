@@ -1,3 +1,4 @@
+import { loadActionTune } from "@/lib/actionTune";
 import { SWING, type SwingTune } from "./swing";
 
 const STORAGE_KEY = "phoneparty.hammer.sensitivity";
@@ -30,9 +31,12 @@ export function saveSensitivity(value: number) {
 /** Higher sensitivity lowers the swing threshold so a lighter hit still scores. */
 export function tuneFromSensitivity(sensitivity: number): SwingTune {
   const s = clampSensitivity(sensitivity);
+  const estimate = loadActionTune("hammer", "hit");
+  const start = estimate?.startMag ?? SWING.startMag;
+  const minPeak = estimate?.minPeak ?? SWING.minPeak;
   return {
     ...SWING,
-    startMag: SWING.startMag / s,
-    minPeak: SWING.minPeak / s,
+    startMag: start / s,
+    minPeak: minPeak / s,
   };
 }

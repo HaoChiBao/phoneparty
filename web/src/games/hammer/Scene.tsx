@@ -1,39 +1,25 @@
 "use client";
 
-import { Grid, PerspectiveCamera } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import type { ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { useRoundState } from "./logic";
+import { Orchard } from "./Orchard";
 import { SwingHint } from "./SwingHint";
-import { Tower } from "./Tower";
 
 const ACCENT = "#0057FF";
 
 function Stage({ children }: { children: ReactNode }) {
   return (
     <>
-      <color attach="background" args={["#f4f6fa"]} />
-      <fog attach="fog" args={["#f4f6fa", 16, 38]} />
-      <PerspectiveCamera makeDefault position={[0, 3.9, 12.4]} fov={50} />
-      <ambientLight intensity={0.85} />
-      <directionalLight position={[4, 9, 6]} intensity={1.1} />
-      <pointLight position={[0, 8, 3]} intensity={12} color={ACCENT} distance={18} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[24, 20]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-      <Grid
-        args={[24, 20]}
-        cellSize={0.5}
-        cellThickness={0.45}
-        cellColor="#d7dce6"
-        sectionSize={2}
-        sectionThickness={1}
-        sectionColor="#111111"
-        fadeDistance={26}
-        position={[0, 0.01, 0]}
-      />
+      <color attach="background" args={["#c8dff0"]} />
+      <fog attach="fog" args={["#c8dff0", 16, 40]} />
+      <PerspectiveCamera makeDefault position={[-0.6, 3.3, 12.2]} fov={48} />
+      <hemisphereLight color="#eef4ff" groundColor="#6a8f4e" intensity={0.85} />
+      <ambientLight intensity={0.35} />
+      <directionalLight position={[6, 10, 4]} intensity={1.15} />
+      <pointLight position={[-3, 5, 3]} intensity={8} color="#ffd9a8" distance={16} />
       {children}
     </>
   );
@@ -47,7 +33,7 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
     <>
       <HostCanvas>
         <Stage>
-          <Tower
+          <Orchard
             order={round.order}
             swings={round.swings}
             lastSwing={round.lastSwing}
@@ -62,14 +48,14 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
           {round.order.length === 0 ? (
             <>
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Hammer
+                Apples
               </p>
               <p className="text-2xl font-bold tracking-tight">
                 Waiting for a phone…
               </p>
               <p className="text-sm text-black/55">
                 Scan the QR, tap Enable motion, tap Ready, then swing when the
-                phone turns green.
+                phone turns green. Hit the tree.
               </p>
             </>
           ) : round.done ? (
@@ -78,10 +64,10 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
                 Round over
               </p>
               <p className="text-3xl font-bold tracking-tight">
-                {round.winner ? `${round.winner.name} wins` : "No score"}
+                {round.winner ? `${round.winner.name} wins` : "No apples"}
                 {round.winner ? (
                   <span className="ml-3 text-black/45">
-                    {round.swings[round.winner.id]?.score ?? 0}
+                    {round.swings[round.winner.id]?.score ?? 0} apples
                   </span>
                 ) : null}
               </p>
@@ -104,8 +90,8 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
               <div className="flex items-center gap-4">
                 <SwingHint size={128} accent={activeColor} />
                 <p className="max-w-[16rem] text-left text-sm leading-5 text-black/60">
-                  Hold the phone like a mallet. When the phone is green, swing
-                  straight down.
+                  You are the bear. When the phone is green, swing down and
+                  knock apples out of the tree.
                 </p>
               </div>
             </>

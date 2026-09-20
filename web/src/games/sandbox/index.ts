@@ -6,4 +6,5 @@ export const sandboxGame: GameDefinition = {
   title: "Sandbox",
   blurb: "Empty floor. Copy this folder to start a game.",
   Scene: SandboxScene,
+  motionLabels: [{ id: "move", title: "sandbox move" }],
 };

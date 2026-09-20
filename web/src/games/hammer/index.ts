@@ -4,9 +4,10 @@ import { HammerScene } from "./Scene";
 
 export const hammerGame: GameDefinition = {
   id: "hammer",
-  title: "Hammer",
-  blurb: "Take turns. Swing the phone down like a mallet. Highest wins.",
+  title: "Apples",
+  blurb: "You're a bear. Hit the tree. Stronger swings shake more apples out.",
   Scene: HammerScene,
   PadExtra: HammerPad,
   hideAimPad: true,
+  motionLabels: [{ id: "hit", title: "bear hit" }],
 };

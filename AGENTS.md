@@ -12,7 +12,7 @@ This file is the source of truth for agents working in this repo. `web/AGENTS.md
 - After **Enable motion**, the phone streams orientation and position into the room. **Calibrate at the TV** zeros relative aim and position.
 - On a computer, dragging the on-screen remote aims and sets X/Y so the session can be tested without a phone.
 
-Shipped games live in `web/src/games/`. **Hammer** is the carnival high striker: players take turns, tap **Ready** (the phone goes green), then swing down — peak acceleration launches a puck up the tower and the highest score wins. Hammer **Test mode** on the phone calibrates the rest pose and a sensitivity slider; practice swings do not count. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Beer pong** is turn-based throws at a 3D cup rack. **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
+Shipped games live in `web/src/games/`. **Apples** (`id: hammer`) is the bear-and-tree game: players take turns, tap **Ready** (the phone goes green), then swing down — a paw hits the tree and apples fall equal to the swing score; most apples wins. **Test mode** on the phone calibrates the rest pose and a sensitivity slider; practice swings do not count. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Beer pong** is turn-based throws at a 3D cup rack. **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
 
 ## Repo
 
@@ -111,6 +111,7 @@ Rules:
 - **Aim axis:** the front of the phone (screen / front-camera face). Point that face at the TV and calibrate; later samples are relative to that pose. Gyro uses DeviceOrientation `YXZ` plus a −90° X correction. Do not add a 180° Y flip on both sample and calib — that inverts tilt.
 - **Gyro / aim:** `DeviceOrientationEvent` `alpha`, `beta`, `gamma`. Calibration stores a pose and later samples are relative to it.
 - **Position:** `DeviceMotionEvent.acceleration` (gravity removed). Integrated with a deadzone and velocity damping into bounded `x`, `y`, `z`. This is not GPS and it will drift. Calibrate resets position to the origin.
+- **Motion recorder:** On the phone, **Record movement** captures raw orientation + accelerometer frames, tagged with that game’s gesture name (`bear hit`, `beer pong flick`, `range aim`, `sandbox move`). Clips persist in IndexedDB on that phone. **Export JSON** shares or downloads them. After a few clips, the pad estimates peak g, when the action hits, and a start / min-peak gate. **Use for this game** writes `localStorage` `phoneparty.action-tune.{gameId}.{labelId}` so Apples and Beer pong can use those gates. Recording does not send a socket event and must not fire a scored game action.
 - **iOS:** both `DeviceOrientationEvent.requestPermission` and `DeviceMotionEvent.requestPermission` run on the Enable motion tap. Needs HTTPS (or localhost).
 - **Desktop:** pointer drag on the remote sets `beta`/`gamma` and `x`/`y` (`z` stays 0).
 
@@ -181,13 +182,13 @@ Same-Wi-Fi local test: `npm run dev`, open `http://{LAN-IP}:3000` on the host, s
 
 Keep the session and controller. Add a folder under `web/src/games/`. Do not fork `/`, `/play/[code]`, `/c/[code]`, Socket.IO, or `usePartySocket`.
 
-Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadExtra`, optional `hideAimPad`). Developers can work in separate folders at the same time. The only shared edit when shipping a new title is one import plus one array entry in `web/src/games/catalog.ts`.
+Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadExtra`, optional `hideAimPad`, optional `motionLabels`). Developers can work in separate folders at the same time. The only shared edit when shipping a new title is one import plus one array entry in `web/src/games/catalog.ts`.
 
 1. Copy `web/src/games/sandbox/` to `web/src/games/<id>/`. Use a kebab-case id (`duck-hunt`).
 2. Export a `GameDefinition` from that folder’s `index.ts`. Put the 3D playfield in `Scene.tsx`.
 3. Register it in `web/src/games/catalog.ts`. Leave the server alone unless you need a new shared event.
 4. In `Scene`, read `gyroByPlayer` and `calibByPlayer`. Treat `alpha/beta/gamma` as aim and `x/y/z` as a short-range position offset. Reuse `web/src/games/shared/Wand.tsx` and `HostCanvas.tsx` when they fit.
-5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button. `PadExtra` also receives `players`, `selfId`, `actionsByPlayer`, `motionReady`, and the latest `sample`, so a pad can follow turn order on its own: `gameActionState` is broadcast to the whole room, including the phone that sent it, so the TV and every phone derive the same game state with no server change. Hammer does this — see `web/src/games/hammer/logic.ts`. Hammer's Ready button is local pad state (green full-screen), not a socket event; only the swing itself is a `gameAction`. Set `hideAimPad` when a game does not aim at the TV; the shared Enable motion button stays either way, since it is the sensor permission gate.
+5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button. `PadExtra` also receives `players`, `selfId`, `actionsByPlayer`, `motionReady`, the latest `sample`, and `capturingMotion`, so a pad can follow turn order on its own: `gameActionState` is broadcast to the whole room, including the phone that sent it, so the TV and every phone derive the same game state with no server change. Apples does this — see `web/src/games/hammer/logic.ts`. The Ready button is local pad state (green full-screen), not a socket event; only the swing itself is a `gameAction`. Set `hideAimPad` when a game does not aim at the TV; the shared Enable motion button stays either way, since it is the sensor permission gate. Set `motionLabels` to the gestures the shared recorder should tag (`bear hit`, `beer pong flick`). If omitted, the recorder uses `{title} move`.
 6. Chrome stays Helvetica / white / black / blue. Art direction belongs on the 3D canvas.
 
 `gameId` is stored on the room and broadcast in `roomState`. The host picker and home lobby both read `listGames()`. The shared remote (enable motion, calibrate, aim pad) stays in `ControllerPad`.
