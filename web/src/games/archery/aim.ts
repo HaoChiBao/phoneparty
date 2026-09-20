@@ -22,16 +22,23 @@ export type Aim = { x: number; y: number; xDeg: number; yDeg: number };
 
 export const CENTER_AIM: Aim = { x: 0, y: 0, xDeg: 0, yDeg: 0 };
 
+/** Below this the aim is pointing behind the archer. */
+const MIN_FORWARD = 0.05;
+/** Target radii out: comfortably off the face. */
+const BEHIND = 4;
+
 const quat = new THREE.Quaternion();
 const scratch = new THREE.Quaternion();
 const dir = new THREE.Vector3();
 
 /**
  * Where the BACK of the phone points, relative to the pose captured when the
- * player tapped Ready. The shared pipeline aims out the phone's front face
- * (Wand.tsx uses local -Z) because those games point the screen at the TV. An
- * archer holds the phone with the screen toward themselves, so this aims out
- * the back — local +Z — then flips into TV space, where the target sits down -Z.
+ * player tapped Ready. With only the -90 degree X correction in
+ * setDeviceQuaternion, local -Z IS the back of the phone: in the earth frame it
+ * is (0, -cos beta, -sin beta), so upright (beta 90) points at the TV and flat
+ * (beta 0) points at the floor. The relative frame already lines up with world
+ * space, so no axis flips are needed here — and none should be added, for the
+ * reason orientation.ts spells out.
  *
  * Returns the offset in degrees and as a fraction of the target radius, where
  * 1 is the outer edge of the face.
@@ -42,19 +49,23 @@ export function aimFromSample(
 ): Aim {
   if (!sample || !zero) return CENTER_AIM;
   setRelativeQuaternion(quat, sample, zero, scratch);
-  dir.set(0, 0, 1).applyQuaternion(quat);
-  // 180 degrees about Y, so the phone's back looks into the screen.
-  // Y is negated too: the relative frame reports pitch opposite to the earth
-  // frame, where the back direction is (0, -cos beta, -sin beta) — upright
-  // (beta 90) points at the TV and flat (beta 0) points at the floor. Without
-  // this, tipping the phone up would drop the aim.
-  const x = -dir.x;
-  const y = -dir.y;
-  // Clamped so aiming past 90 degrees stays far off target instead of
-  // wrapping back through the bullseye.
-  const forward = Math.max(-(-dir.z), 0.05);
-  const xDeg = THREE.MathUtils.radToDeg(Math.atan2(x, forward));
-  const yDeg = THREE.MathUtils.radToDeg(Math.atan2(y, forward));
+  dir.set(0, 0, -1).applyQuaternion(quat);
+  const forward = -dir.z;
+  if (forward <= MIN_FORWARD) {
+    // Aimed behind the archer. Turned exactly backwards the lateral components
+    // are both zero, which would read as a dead-centre bullseye, so this is
+    // forced out to a definite miss instead.
+    const lateral = Math.hypot(dir.x, dir.y);
+    if (lateral < 1e-6) return { x: 0, y: -BEHIND, xDeg: 0, yDeg: -90 };
+    return {
+      x: (dir.x / lateral) * BEHIND,
+      y: (dir.y / lateral) * BEHIND,
+      xDeg: (dir.x / lateral) * 90,
+      yDeg: (dir.y / lateral) * 90,
+    };
+  }
+  const xDeg = THREE.MathUtils.radToDeg(Math.atan2(dir.x, forward));
+  const yDeg = THREE.MathUtils.radToDeg(Math.atan2(dir.y, forward));
   return {
     x: xDeg / AIM.degreesToEdge,
     y: yDeg / AIM.degreesToEdge,
