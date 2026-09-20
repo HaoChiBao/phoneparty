@@ -1,23 +1,41 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { listAdvancedGames, listFeaturedGames } from "@/games/catalog";
+import { useState } from "react";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
+
+const PLANKS = [
+  {
+    label: "Archery",
+    gameId: "archery",
+    style: { left: "13.9%", top: "15.2%", width: "63.3%", height: "12.9%" },
+  },
+  {
+    label: "Fishing",
+    gameId: "fishing",
+    style: { left: "27%", top: "34%", width: "62.1%", height: "12.9%" },
+  },
+  {
+    label: "Beer pong",
+    gameId: "beer-pong",
+    style: { left: "13.1%", top: "52.7%", width: "61.7%", height: "12.9%" },
+  },
+  {
+    label: "Host game",
+    gameId: DEFAULT_GAME_ID,
+    style: { left: "26.2%", top: "71.1%", width: "62.7%", height: "12.1%" },
+  },
+] as const;
 
 export function HomeLobby() {
   const router = useRouter();
   const [entered, setEntered] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [code, setCode] = useState("");
-  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const games = listFeaturedGames();
-  const advanced = listAdvancedGames();
 
-  async function hostParty() {
+  async function hostGame(gameId: string) {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -27,16 +45,6 @@ export function HomeLobby() {
       setError(err instanceof Error ? err.message : "Could not start a room");
       setBusy(false);
     }
-  }
-
-  function joinParty(event: FormEvent) {
-    event.preventDefault();
-    const next = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (next.length < 4) {
-      setError("Enter the 4-character room code");
-      return;
-    }
-    router.push(`/c/${next}`);
   }
 
   return (
@@ -81,124 +89,39 @@ export function HomeLobby() {
       </div>
 
       <div
-        className={`absolute inset-x-0 bottom-0 z-10 flex justify-center overflow-y-auto px-6 pb-8 pt-4 transition-opacity duration-500 motion-reduce:transition-none ${
+        className={`absolute bottom-[2vh] right-[1.5vw] z-10 w-[min(42vw,26rem)] origin-bottom-right transition-opacity duration-500 motion-reduce:transition-none ${
           entered
             ? "opacity-100 delay-300"
-            : "pointer-events-none opacity-0 delay-0"
+            : "pointer-events-none opacity-0"
         }`}
       >
-        <div className="w-full max-w-lg rounded-2xl bg-white/92 p-5">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-            Phone remote
-          </p>
-          <p className="mt-2 text-[17px] leading-6 text-black/70">
-            Pick a game, open it on the TV, then join with a phone. Aim with the
-            front of the phone (the camera side).
-          </p>
-
-          <div className="mt-5 flex flex-col gap-2">
-            {games.map((game) => {
-              const selected = game.id === gameId;
-              return (
-                <button
-                  key={game.id}
-                  type="button"
-                  onClick={() => setGameId(game.id)}
-                  className={
-                    selected
-                      ? "rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
-                      : "rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
-                  }
-                >
-                  <span className="block text-[15px] font-medium">{game.title}</span>
-                  <span
-                    className={`mt-1 block text-sm ${selected ? "text-white/80" : "text-black/50"}`}
-                  >
-                    {game.blurb}
-                  </span>
-                </button>
-              );
-            })}
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowAdvanced((open) => !open)}
-                className={
-                  advanced.some((game) => game.id === gameId)
-                    ? "flex w-full items-center justify-between rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
-                    : "flex w-full items-center justify-between rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
-                }
-              >
-                <span className="text-[15px] font-medium">Advanced</span>
-                <span
-                  className={`text-[11px] uppercase tracking-[0.18em] ${
-                    advanced.some((game) => game.id === gameId)
-                      ? "text-white/80"
-                      : "text-black/45"
-                  }`}
-                >
-                  {showAdvanced ? "Hide" : "Show"}
-                </span>
-              </button>
-              {showAdvanced ? (
-                <div className="mt-2 flex flex-col gap-2">
-                  {advanced.map((game) => {
-                    const selected = game.id === gameId;
-                    return (
-                      <button
-                        key={game.id}
-                        type="button"
-                        onClick={() => setGameId(game.id)}
-                        className={
-                          selected
-                            ? "rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
-                            : "rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
-                        }
-                      >
-                        <span className="block text-[15px] font-medium">
-                          {game.title}
-                        </span>
-                        <span
-                          className={`mt-1 block text-sm ${selected ? "text-white/80" : "text-black/50"}`}
-                        >
-                          {game.blurb}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3">
+        <div className={`relative ${busy ? "opacity-70" : ""}`}>
+          <img
+            src="/landing-sign.png"
+            alt=""
+            className="pointer-events-none h-auto w-full select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]"
+          />
+          {PLANKS.map((plank) => (
             <button
+              key={plank.label}
               type="button"
-              onClick={hostParty}
               disabled={busy}
-              className="h-12 bg-accent px-5 text-[15px] font-medium text-white disabled:opacity-50"
-            >
-              {busy ? "Opening room…" : "Host a room"}
-            </button>
-            <form onSubmit={joinParty} className="flex gap-2">
-              <input
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
-                placeholder="CODE"
-                maxLength={6}
-                aria-label="Room code"
-                className="h-12 w-full border border-black/15 bg-white px-4 tracking-[0.28em] outline-none focus:border-accent"
-              />
-              <button
-                type="submit"
-                className="h-12 border border-black px-5 text-[15px] font-medium"
-              >
-                Join
-              </button>
-            </form>
-            {error && <p className="text-sm text-accent">{error}</p>}
-          </div>
+              onClick={() => hostGame(plank.gameId)}
+              style={plank.style}
+              className="absolute cursor-pointer rounded-sm bg-transparent hover:bg-white/10 disabled:cursor-wait"
+              aria-label={
+                plank.label === "Host game"
+                  ? "Host a game"
+                  : `Host ${plank.label}`
+              }
+            />
+          ))}
         </div>
+        {error && (
+          <p className="mt-2 text-right text-sm font-medium text-black">
+            {error}
+          </p>
+        )}
       </div>
     </main>
   );
