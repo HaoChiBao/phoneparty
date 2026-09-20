@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
 
@@ -30,9 +30,12 @@ const PLANKS = [
 
 export function HomeLobby() {
   const router = useRouter();
-  const [entered, setEntered] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const idle = phase === "idle";
+  const done = phase === "done";
 
   async function hostGame(gameId: string) {
     if (busy) return;
@@ -47,29 +50,32 @@ export function HomeLobby() {
     }
   }
 
+  function goNext() {
+    const video = videoRef.current;
+    if (!video || !idle) return;
+    setPhase("playing");
+    const play = video.play();
+    if (play) play.catch(() => setPhase("done"));
+  }
+
   return (
     <main className="relative h-dvh overflow-hidden bg-[#7eb8e6]">
-      <img
-        src="/landing.jpg"
-        alt=""
-        className="pointer-events-none absolute left-1/2 top-0 max-w-none will-change-transform motion-reduce:transition-none"
-        style={{
-          height: "max(175dvh, 100vw)",
-          width: "auto",
-          transform: entered
-            ? "translate(-50%, calc(100dvh - 100%))"
-            : "translate(-50%, 0)",
-          transition: "transform 1.15s cubic-bezier(0.22, 1, 0.36, 1)",
+      <video
+        ref={videoRef}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        src="/landing.mp4"
+        poster="/landing-poster.jpg"
+        muted
+        playsInline
+        preload="auto"
+        onEnded={() => setPhase("done")}
+        onLoadedData={(event) => {
+          event.currentTarget.currentTime = 0;
+          event.currentTarget.pause();
         }}
       />
 
-      <div
-        className="absolute left-1/2 z-10 flex w-full max-w-3xl flex-col items-center px-6 transition-[top,transform] duration-[1150ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-        style={{
-          top: entered ? "11%" : "50%",
-          transform: entered ? "translate(-50%, 0)" : "translate(-50%, -50%)",
-        }}
-      >
+      <div className="absolute left-1/2 top-1/2 z-10 flex w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col items-center px-6">
         <img
           src="/bearlympics.png"
           alt="Bearlympics"
@@ -77,51 +83,51 @@ export function HomeLobby() {
         />
         <button
           type="button"
-          onClick={() => setEntered(true)}
-          tabIndex={entered ? -1 : 0}
-          aria-hidden={entered}
+          onClick={goNext}
+          tabIndex={idle ? 0 : -1}
+          aria-hidden={!idle}
           className={`mt-8 h-12 min-w-40 bg-accent px-8 text-[15px] font-medium text-white transition-opacity duration-300 motion-reduce:transition-none ${
-            entered ? "pointer-events-none opacity-0" : "opacity-100"
+            idle ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
         >
-          Enter
+          Next
         </button>
       </div>
 
       <div
-        className={`absolute bottom-[2vh] right-[1.5vw] z-10 w-[min(42vw,26rem)] origin-bottom-right transition-opacity duration-500 motion-reduce:transition-none ${
-          entered
-            ? "opacity-100 delay-300"
-            : "pointer-events-none opacity-0"
+        className={`absolute inset-x-0 bottom-0 z-10 flex justify-end transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          done ? "translate-y-0" : "pointer-events-none translate-y-full"
         }`}
       >
-        <div className={`relative ${busy ? "opacity-70" : ""}`}>
-          <img
-            src="/landing-sign.png"
-            alt=""
-            className="pointer-events-none h-auto w-full select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]"
-          />
-          {PLANKS.map((plank) => (
-            <button
-              key={plank.label}
-              type="button"
-              disabled={busy}
-              onClick={() => hostGame(plank.gameId)}
-              style={plank.style}
-              className="absolute cursor-pointer rounded-sm bg-transparent hover:bg-white/10 disabled:cursor-wait"
-              aria-label={
-                plank.label === "Host game"
-                  ? "Host a game"
-                  : `Host ${plank.label}`
-              }
+        <div className="relative -bottom-[8vh] -right-[1vw] w-[min(58vw,36rem)] origin-bottom rotate-[-5deg] skew-x-[-5deg]">
+          <div className={`relative ${busy ? "opacity-70" : ""}`}>
+            <img
+              src="/landing-sign.png"
+              alt=""
+              className="pointer-events-none h-auto w-full select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]"
             />
-          ))}
+            {PLANKS.map((plank) => (
+              <button
+                key={plank.label}
+                type="button"
+                disabled={busy || !done}
+                onClick={() => hostGame(plank.gameId)}
+                style={plank.style}
+                className="absolute cursor-pointer rounded-sm bg-transparent hover:bg-white/10 disabled:cursor-wait"
+                aria-label={
+                  plank.label === "Host game"
+                    ? "Host a game"
+                    : `Host ${plank.label}`
+                }
+              />
+            ))}
+          </div>
+          {error && (
+            <p className="mt-2 text-right text-sm font-medium text-black">
+              {error}
+            </p>
+          )}
         </div>
-        {error && (
-          <p className="mt-2 text-right text-sm font-medium text-black">
-            {error}
-          </p>
-        )}
       </div>
     </main>
   );
