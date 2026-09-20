@@ -1,8 +1,9 @@
+import { hammerGame } from "./hammer";
 import { rangeGame } from "./range";
 import { sandboxGame } from "./sandbox";
 import type { GameDefinition } from "./types";
 
-const games: GameDefinition[] = [rangeGame, sandboxGame];
+const games: GameDefinition[] = [hammerGame, rangeGame, sandboxGame];
 
 export function listGames() {
   return games;

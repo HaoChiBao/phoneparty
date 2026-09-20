@@ -37,6 +37,7 @@ export function ControllerPad({ code }: { code: string }) {
   const accent = self?.color ?? "#0057FF";
   const game = getGame(gameId);
   const PadExtra = game.PadExtra;
+  const hideAimPad = Boolean(game.hideAimPad);
   const lastAction = selfId ? actionsByPlayer[selfId] : undefined;
 
   function publish(next: GyroSample) {
@@ -143,9 +144,11 @@ export function ControllerPad({ code }: { code: string }) {
         </p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">{code}</h1>
         <p className="mt-2 text-sm text-black/60">
-          {connected
-            ? "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."
-            : "Joining the room…"}
+          {!connected
+            ? "Joining the room…"
+            : hideAimPad
+              ? "You are in the room. Enable motion, then follow the prompt below."
+              : "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."}
         </p>
         {(error || motionError) && (
           <p className="mt-3 text-sm text-accent">{error ?? motionError}</p>
@@ -153,35 +156,47 @@ export function ControllerPad({ code }: { code: string }) {
       </header>
 
       <div className="flex flex-col items-center gap-5">
-        <button
-          type="button"
-          aria-label="Aim pad"
-          className="h-40 w-[88px] touch-none border-2 bg-white"
-          onPointerMove={aimFromPointer}
-          onPointerDown={aimFromPointer}
-          style={{
-            borderColor: accent,
-            transform: sample
-              ? `translate(${sample.x * 18}px, ${-sample.y * 18}px) rotate(${sample.gamma * 0.8}deg)`
-              : undefined,
-          }}
-        >
-          <div
-            className="mx-auto mt-3 h-3 w-3 rounded-full"
-            style={{ background: accent }}
-          />
-        </button>
-        <p className="text-center text-xs tracking-wide text-black/40">
-          {sample
-            ? `gyro ${sample.beta.toFixed(0)}° ${sample.gamma.toFixed(0)}°`
-            : "No gyro yet"}
-          <br />
-          {sample
-            ? `xyz ${sample.x.toFixed(2)}  ${sample.y.toFixed(2)}  ${sample.z.toFixed(2)}`
-            : "No position yet"}
-        </p>
+        {!hideAimPad ? (
+          <>
+            <button
+              type="button"
+              aria-label="Aim pad"
+              className="h-40 w-[88px] touch-none border-2 bg-white"
+              onPointerMove={aimFromPointer}
+              onPointerDown={aimFromPointer}
+              style={{
+                borderColor: accent,
+                transform: sample
+                  ? `translate(${sample.x * 18}px, ${-sample.y * 18}px) rotate(${sample.gamma * 0.8}deg)`
+                  : undefined,
+              }}
+            >
+              <div
+                className="mx-auto mt-3 h-3 w-3 rounded-full"
+                style={{ background: accent }}
+              />
+            </button>
+            <p className="text-center text-xs tracking-wide text-black/40">
+              {sample
+                ? `gyro ${sample.beta.toFixed(0)}° ${sample.gamma.toFixed(0)}°`
+                : "No gyro yet"}
+              <br />
+              {sample
+                ? `xyz ${sample.x.toFixed(2)}  ${sample.y.toFixed(2)}  ${sample.z.toFixed(2)}`
+                : "No position yet"}
+            </p>
+          </>
+        ) : null}
         {PadExtra ? (
-          <PadExtra sendAction={sendGameAction} lastAction={lastAction} />
+          <PadExtra
+            sendAction={sendGameAction}
+            lastAction={lastAction}
+            actionsByPlayer={actionsByPlayer}
+            players={players}
+            selfId={selfId}
+            motionReady={motionReady}
+            sample={sample}
+          />
         ) : null}
       </div>
 
@@ -194,7 +209,7 @@ export function ControllerPad({ code }: { code: string }) {
           >
             Enable motion
           </button>
-        ) : (
+        ) : hideAimPad ? null : (
           <button
             type="button"
             onClick={calibrate}
@@ -204,8 +219,9 @@ export function ControllerPad({ code }: { code: string }) {
           </button>
         )}
         <p className="text-center text-xs text-black/40">
-          Aim with the front of the phone, the camera-facing side. iPhones need
-          HTTPS and a tap before sensors stream. On a computer, drag the remote.
+          {hideAimPad
+            ? "Hold the phone flat with the rear camera facing the floor. iPhones need HTTPS and a tap before sensors stream."
+            : "Aim with the front of the phone, the camera-facing side. iPhones need HTTPS and a tap before sensors stream. On a computer, drag the remote."}
         </p>
       </div>
     </div>

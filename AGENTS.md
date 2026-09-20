@@ -12,7 +12,7 @@ This file is the source of truth for agents working in this repo. `web/AGENTS.md
 - After **Enable motion**, the phone streams orientation and position into the room. **Calibrate at the TV** zeros relative aim and position.
 - On a computer, dragging the on-screen remote aims and sets X/Y so the session can be tested without a phone.
 
-Shipped games live in `web/src/games/`. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
+Shipped games live in `web/src/games/`. **Hammer** is the carnival high striker: players take turns, hold the phone flat with the rear camera at the floor, and swing it down — peak acceleration launches a puck up the tower and the highest score wins. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
 
 ## Repo
 
@@ -179,13 +179,13 @@ Same-Wi-Fi local test: `npm run dev`, open `http://{LAN-IP}:3000` on the host, s
 
 Keep the session and controller. Add a folder under `web/src/games/`. Do not fork `/`, `/play/[code]`, `/c/[code]`, Socket.IO, or `usePartySocket`.
 
-Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadExtra`). Developers can work in separate folders at the same time. The only shared edit when shipping a new title is one import plus one array entry in `web/src/games/catalog.ts`.
+Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadExtra`, optional `hideAimPad`). Developers can work in separate folders at the same time. The only shared edit when shipping a new title is one import plus one array entry in `web/src/games/catalog.ts`.
 
 1. Copy `web/src/games/sandbox/` to `web/src/games/<id>/`. Use a kebab-case id (`duck-hunt`).
 2. Export a `GameDefinition` from that folder’s `index.ts`. Put the 3D playfield in `Scene.tsx`.
 3. Register it in `web/src/games/catalog.ts`. Leave the server alone unless you need a new shared event.
 4. In `Scene`, read `gyroByPlayer` and `calibByPlayer`. Treat `alpha/beta/gamma` as aim and `x/y/z` as a short-range position offset. Reuse `web/src/games/shared/Wand.tsx` and `HostCanvas.tsx` when they fit.
-5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button.
+5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button. `PadExtra` also receives `players`, `selfId`, `actionsByPlayer`, `motionReady`, and the latest `sample`, so a pad can follow turn order on its own: `gameActionState` is broadcast to the whole room, including the phone that sent it, so the TV and every phone derive the same game state with no server change. Hammer does this — see `web/src/games/hammer/logic.ts`. Set `hideAimPad` when a game does not aim at the TV; the shared Enable motion button stays either way, since it is the sensor permission gate.
 6. Chrome stays Helvetica / white / black / blue. Art direction belongs on the 3D canvas.
 
 `gameId` is stored on the room and broadcast in `roomState`. The host picker and home lobby both read `listGames()`. The shared remote (enable motion, calibrate, aim pad) stays in `ControllerPad`.
