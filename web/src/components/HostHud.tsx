@@ -33,6 +33,7 @@ export function HostHud({
   const advanced = listAdvancedGames();
   const advancedSelected = advanced.some((game) => game.id === gameId);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(true);
 
   useEffect(() => {
     if (advancedSelected) setAdvancedOpen(true);
@@ -105,58 +106,48 @@ export function HostHud({
             </div>
           </div>
         </div>
-        <div className="pointer-events-auto overflow-hidden rounded-2xl border border-black bg-white p-3">
-          {joinUrl ? (
-            <QRCodeSVG
-              value={joinUrl}
-              size={140}
-              bgColor="#ffffff"
-              fgColor="#000000"
-              includeMargin={false}
-            />
-          ) : (
-            <div className="h-[140px] w-[140px] bg-black/5" />
-          )}
-          <p className="mt-2 max-w-[140px] text-center text-[11px] leading-4 text-black/55">
-            Phone controller
-          </p>
-        </div>
+        {qrOpen ? (
+          <div className="pointer-events-auto overflow-hidden rounded-2xl border border-black bg-white p-3">
+            <div className="mb-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setQrOpen(false)}
+                className="text-[10px] uppercase tracking-[0.16em] text-black/40"
+              >
+                Minimize
+              </button>
+            </div>
+            {joinUrl ? (
+              <QRCodeSVG
+                value={joinUrl}
+                size={140}
+                bgColor="#ffffff"
+                fgColor="#000000"
+                includeMargin={false}
+              />
+            ) : (
+              <div className="h-[140px] w-[140px] bg-black/5" />
+            )}
+            <p className="mt-2 max-w-[140px] text-center text-[11px] leading-4 text-black/55">
+              Phone controller
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setQrOpen(true)}
+            className="pointer-events-auto rounded-2xl border border-black bg-white px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-black"
+          >
+            QR
+          </button>
+        )}
       </div>
       <GameSign
         title={game.title}
-        body={game.howToPlay ?? game.blurb}
-        code={code}
+        players={controllers}
+        gyroByPlayer={gyroByPlayer}
+        onKick={onKick}
       />
-      <div className="pointer-events-auto flex flex-wrap justify-start gap-2 pb-1 pr-[min(27rem,42vw)]">
-        {controllers.length === 0 ? (
-          <span className="rounded-2xl bg-white/90 px-3 py-1.5 text-xs text-black/55">
-            Waiting for a phone…
-          </span>
-        ) : (
-          controllers.map((player) => {
-            const motion = gyroByPlayer[player.id];
-            return (
-              <span
-                key={player.id}
-                className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs text-white"
-                style={{ background: player.color }}
-              >
-                {player.name}
-                {motion
-                  ? `  ${motion.x.toFixed(2)} ${motion.y.toFixed(2)} ${motion.z.toFixed(2)}`
-                  : ""}
-                <button
-                  type="button"
-                  onClick={() => onKick(player.id)}
-                  className="underline decoration-white/70 underline-offset-2"
-                >
-                  Kick
-                </button>
-              </span>
-            );
-          })
-        )}
-      </div>
     </div>
   );
 }
