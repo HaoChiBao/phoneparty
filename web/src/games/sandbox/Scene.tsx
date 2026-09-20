@@ -17,8 +17,8 @@ export function SandboxScene({
     <HostCanvas>
       <color attach="background" args={["#ffffff"]} />
       <PerspectiveCamera makeDefault position={[0, 2.2, 7.2]} fov={55} />
-      <ambientLight intensity={1.25} />
-      <directionalLight position={[2, 5, 3]} intensity={1.3} />
+      <ambientLight intensity={0.9} />
+      <directionalLight position={[2, 5, 3]} intensity={0.9} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[20, 20]} />
         <MatteMaterial color="#ffffff" />
@@ -27,10 +27,10 @@ export function SandboxScene({
         args={[20, 20]}
         cellSize={0.5}
         cellThickness={0.4}
-        cellColor="#e8ebf0"
+        cellColor="#e4e7ee"
         sectionSize={2}
         sectionThickness={1}
-        sectionColor="#3a3a3a"
+        sectionColor="#111111"
         fadeDistance={20}
         position={[0, 0.01, 0]}
       />

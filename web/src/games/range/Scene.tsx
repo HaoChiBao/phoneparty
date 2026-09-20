@@ -27,11 +27,11 @@ function Targets() {
 function Stage({ wands }: { wands: ReturnType<typeof wandsFromControllers> }) {
   return (
     <>
-      <color attach="background" args={["#ffffff"]} />
-      <fog attach="fog" args={["#ffffff", 16, 32]} />
+      <color attach="background" args={["#f4f6fa"]} />
+      <fog attach="fog" args={["#f4f6fa", 12, 28]} />
       <PerspectiveCamera makeDefault position={[0, 1.6, 6.4]} fov={55} />
-      <ambientLight intensity={1.25} />
-      <directionalLight position={[3, 6, 4]} intensity={1.35} />
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[3, 6, 4]} intensity={1.1} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[18, 16]} />
         <MatteMaterial color="#ffffff" />
@@ -40,10 +40,10 @@ function Stage({ wands }: { wands: ReturnType<typeof wandsFromControllers> }) {
         args={[18, 16]}
         cellSize={0.5}
         cellThickness={0.45}
-        cellColor="#e8ebf0"
+        cellColor="#d7dce6"
         sectionSize={2}
         sectionThickness={1}
-        sectionColor="#3a3a3a"
+        sectionColor="#111111"
         fadeDistance={18}
         position={[0, 0.01, 0]}
       />

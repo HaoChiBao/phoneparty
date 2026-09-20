@@ -496,9 +496,9 @@ export function BeerPongScene({
       <HostCanvas>
         <color attach="background" args={["#ffffff"]} />
         <TurnCamera team={viewTeam} phase={viewPhase} />
-        <ambientLight intensity={1.25} />
-        <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.4} />
-        <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.6} />
+        <ambientLight intensity={0.95} />
+        <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.15} />
+        <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <planeGeometry args={[14, 12]} />
           <MatteMaterial color="#ffffff" />
