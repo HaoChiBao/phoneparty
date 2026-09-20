@@ -22,7 +22,7 @@ function getGrainTexture() {
     image.data[i + 2] = n;
     image.data[i + 3] = 255;
   }
-  ctx.putImageData(image, 0);
+  ctx.putImageData(image, 0, 0);
   sharedGrain = new THREE.CanvasTexture(canvas);
   sharedGrain.wrapS = THREE.RepeatWrapping;
   sharedGrain.wrapT = THREE.RepeatWrapping;
