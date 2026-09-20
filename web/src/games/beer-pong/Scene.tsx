@@ -116,10 +116,6 @@ function Table() {
   );
 }
 
-function cupRadiusAt(t: number) {
-  return CUP.baseRadius + (CUP.rimRadius - CUP.baseRadius) * t;
-}
-
 function CupMesh({ cup }: { cup: CupSlot }) {
   if (!cup.live) return null;
   const h = CUP.height;
@@ -147,15 +143,6 @@ function CupMesh({ cup }: { cup: CupSlot }) {
         <ringGeometry args={[innerRim - 0.001, CUP.rimRadius + 0.003, 28]} />
         <meshStandardMaterial color={SOLO_WHITE} roughness={0.2} />
       </mesh>
-      {[0.78, 0.64].map((t) => {
-        const r = cupRadiusAt(t);
-        return (
-          <mesh key={t} position={[0, -h / 2 + h * t, 0]}>
-            <cylinderGeometry args={[r + 0.0009, r + 0.0007, 0.007, 28, 1, true]} />
-            <meshStandardMaterial color={SOLO_WHITE} roughness={0.22} />
-          </mesh>
-        );
-      })}
     </group>
   );
 }
@@ -240,7 +227,7 @@ function TurnCamera({ team, phase }: { team: TeamId | null; phase: Phase }) {
     camera.lookAt(look.current);
   });
 
-  return <PerspectiveCamera makeDefault position={[0, 2.25, 3.7]} fov={46} />;
+  return <PerspectiveCamera makeDefault position={[0, 2.45, 1.55]} fov={40} />;
 }
 
 function rosterKey(controllers: Player[]) {

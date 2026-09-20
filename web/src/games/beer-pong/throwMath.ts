@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { setRelativeQuaternion } from "@/lib/orientation";
 import type { CalibratedPose, GyroSample } from "@/lib/protocol";
-import { CUP, TABLE, liveCups, type CupSlot, type TeamId } from "./layout";
+import { CUP, FRONT_X, TABLE, liveCups, type CupSlot, type TeamId } from "./layout";
 import type { ThrowTune } from "./tune";
 
 const scratchQ = new THREE.Quaternion();
@@ -37,7 +37,7 @@ export function rackCenter(cups: CupSlot[], team: TeamId) {
   const live = liveCups(cups, team);
   if (live.length === 0) {
     const sign = team === "a" ? -1 : 1;
-    return { x: sign * 0.82, z: 0 };
+    return { x: sign * FRONT_X, z: 0 };
   }
   let x = 0;
   let z = 0;

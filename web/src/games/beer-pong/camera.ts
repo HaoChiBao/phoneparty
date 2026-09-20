@@ -7,18 +7,18 @@ export type CameraPose = {
 };
 
 const OVERVIEW: CameraPose = {
-  position: [0, 1.95, 3.15],
-  lookAt: [0, 0.72, 0],
+  position: [0, 2.45, 1.55],
+  lookAt: [0, 0.76, 0],
 };
 
 const TEAM_A: CameraPose = {
-  position: [-2.7, 1.42, 0.28],
-  lookAt: [0.82, 0.86, 0],
+  position: [-0.22, 2.08, 0],
+  lookAt: [0.62, 0.8, 0],
 };
 
 const TEAM_B: CameraPose = {
-  position: [2.7, 1.42, 0.28],
-  lookAt: [-0.82, 0.86, 0],
+  position: [0.22, 2.08, 0],
+  lookAt: [-0.62, 0.8, 0],
 };
 
 export function cameraPose(team: TeamId | null, phase: Phase): CameraPose {
