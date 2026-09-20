@@ -40,7 +40,7 @@ export function ControllerPad({ code }: { code: string }) {
     }
   }
 
-  function aimFromPointer(event: PointerEvent<HTMLDivElement>) {
+  function aimFromPointer(event: PointerEvent<HTMLElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
     const y = (event.clientY - rect.top) / rect.height;
