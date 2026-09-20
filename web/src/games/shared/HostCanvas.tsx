@@ -9,6 +9,9 @@ export function HostCanvas({ children }: { children: ReactNode }) {
       <Canvas
         className="h-full w-full"
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: false }}
+        onCreated={({ gl }) => {
+          gl.toneMappingExposure = 1.22;
+        }}
       >
         {children}
       </Canvas>

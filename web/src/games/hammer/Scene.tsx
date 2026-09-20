@@ -3,6 +3,7 @@
 import { Grid, PerspectiveCamera } from "@react-three/drei";
 import type { ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import type { GameSceneProps } from "@/games/types";
 import { useRoundState } from "./logic";
 import { SwingHint } from "./SwingHint";
@@ -13,24 +14,23 @@ const ACCENT = "#0057FF";
 function Stage({ children }: { children: ReactNode }) {
   return (
     <>
-      <color attach="background" args={["#f4f6fa"]} />
-      <fog attach="fog" args={["#f4f6fa", 16, 38]} />
+      <color attach="background" args={["#ffffff"]} />
+      <fog attach="fog" args={["#ffffff", 20, 42]} />
       <PerspectiveCamera makeDefault position={[0, 3.9, 12.4]} fov={50} />
-      <ambientLight intensity={0.85} />
-      <directionalLight position={[4, 9, 6]} intensity={1.1} />
-      <pointLight position={[0, 8, 3]} intensity={12} color={ACCENT} distance={18} />
+      <ambientLight intensity={1.25} />
+      <directionalLight position={[4, 9, 6]} intensity={1.35} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[24, 20]} />
-        <meshStandardMaterial color="#ffffff" />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <Grid
         args={[24, 20]}
         cellSize={0.5}
         cellThickness={0.45}
-        cellColor="#d7dce6"
+        cellColor="#e8ebf0"
         sectionSize={2}
         sectionThickness={1}
-        sectionColor="#111111"
+        sectionColor="#3a3a3a"
         fadeDistance={26}
         position={[0, 0.01, 0]}
       />

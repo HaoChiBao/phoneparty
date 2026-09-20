@@ -5,6 +5,7 @@ export type BallSim = {
   pos: THREE.Vector3;
   vel: THREE.Vector3;
   bounced: boolean;
+  bounceCount: number;
   settled: boolean;
   sunkId: string | null;
   age: number;
@@ -15,6 +16,7 @@ export function createBall(from: THREE.Vector3, vel: THREE.Vector3): BallSim {
     pos: from.clone(),
     vel: vel.clone(),
     bounced: false,
+    bounceCount: 0,
     settled: false,
     sunkId: null,
     age: 0,
@@ -112,10 +114,13 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
   if (onTable(ball.pos.x, ball.pos.z) && ball.pos.y < tableTop && ball.vel.y <= 0) {
     ball.pos.y = tableTop;
     ball.bounced = true;
-    ball.vel.y *= -0.32;
-    ball.vel.x *= 0.72;
-    ball.vel.z *= 0.72;
-    if (Math.abs(ball.vel.y) < 0.18) ball.vel.y = 0;
+    ball.bounceCount += 1;
+    const incoming = Math.abs(ball.vel.y);
+    const rest = ball.bounceCount === 1 ? 0.7 : 0.5;
+    ball.vel.y = Math.max(incoming * rest, ball.bounceCount === 1 ? 1.15 : 0);
+    if (ball.bounceCount >= 3 && incoming < 0.28) ball.vel.y = 0;
+    ball.vel.x *= 0.84;
+    ball.vel.z *= 0.84;
   }
 
   if (ball.pos.y < BALL.radius && ball.vel.y <= 0) {
@@ -129,7 +134,7 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
   const grounded =
     (onTable(ball.pos.x, ball.pos.z) && ball.pos.y <= tableTop + 0.002) ||
     ball.pos.y <= BALL.radius + 0.002;
-  if (ball.age > 0.35 && grounded && speed < 0.14) {
+  if (ball.age > 0.85 && grounded && speed < 0.12 && (ball.bounceCount >= 2 || !ball.bounced)) {
     ball.settled = true;
     ball.vel.set(0, 0, 0);
   }
