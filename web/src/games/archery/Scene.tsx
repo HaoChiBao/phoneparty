@@ -1,11 +1,12 @@
 "use client";
 
 import { Grid } from "@react-three/drei";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { aimFromSample } from "./aim";
 import { AimHint } from "./AimHint";
+import { BowBear, type BowClip } from "./BowBear";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
 import { RangeCamera } from "./RangeCamera";
 import { Target, TARGET_Z } from "./Target";
@@ -101,6 +102,32 @@ export function ArcheryScene({
   const shotKey = round.lastShot
     ? `${round.lastShot.playerId}:${round.lastShot.timestamp}`
     : "";
+  const drawing = liveAim !== null;
+  const currentId = current?.id ?? null;
+  const [bowClip, setBowClip] = useState<BowClip>("idle");
+  const [bowPlayId, setBowPlayId] = useState(0);
+  const prevShot = useRef("");
+  const prevCurrent = useRef<string | null>(null);
+  const prevDrawing = useRef(false);
+  const currentIdRef = useRef(currentId);
+  const shooterRef = useRef<string | null>(null);
+  currentIdRef.current = currentId;
+
+  useEffect(() => {
+    if (shotKey && shotKey !== prevShot.current) {
+      prevShot.current = shotKey;
+      shooterRef.current = round.lastShot?.playerId ?? null;
+      setBowClip("release");
+      setBowPlayId((id) => id + 1);
+    } else if (drawing && !prevDrawing.current) {
+      setBowClip("charge");
+      setBowPlayId((id) => id + 1);
+    } else if (!drawing && currentId !== prevCurrent.current && bowClip !== "release") {
+      setBowClip("idle");
+    }
+    prevDrawing.current = drawing;
+    prevCurrent.current = currentId;
+  }, [shotKey, drawing, currentId, bowClip, round.lastShot?.playerId]);
 
   return (
     <>
@@ -117,6 +144,15 @@ export function ArcheryScene({
           />
         </Stage>
       </HostCanvas>
+      <BowBear
+        clip={bowClip}
+        playId={bowPlayId}
+        onReleased={() => {
+          setBowClip(
+            currentIdRef.current === shooterRef.current ? "hold" : "idle",
+          );
+        }}
+      />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-center px-5 pb-10">
         <div className="flex max-w-2xl flex-col items-center gap-3 bg-white/92 px-6 py-4 text-center">
