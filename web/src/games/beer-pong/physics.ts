@@ -146,7 +146,10 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
   if (ball.age > 0.25 && !onTable(ball.pos.x, ball.pos.z) && ball.pos.y < TABLE.height && ball.vel.y <= 0) {
     ball.settled = true;
   }
-  if (ball.age > 2.4 || Math.abs(ball.pos.x) > 3.4 || Math.abs(ball.pos.z) > 2.2) {
+  // A non-scoring ball is no longer useful once it has had time to finish its
+  // visible bounce. The old 2.4s cap made the following player wait well after
+  // the ball had effectively landed.
+  if (ball.age > 1.6 || Math.abs(ball.pos.x) > 3.4 || Math.abs(ball.pos.z) > 2.2) {
     ball.settled = true;
   }
   return ball;

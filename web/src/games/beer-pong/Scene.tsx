@@ -2,7 +2,16 @@
 
 import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import * as THREE from "three";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import { MatteMaterial } from "@/games/shared/MatteMaterial";
@@ -33,7 +42,9 @@ import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 import { actionOn, PONG_SYNC, viewFromMatch } from "./view";
 
 const REMATCH_MS = 7000;
-const REVEAL_MS = 450;
+// Keep the made cup readable, but do not make the next player wait through a
+// long celebration after the ball has already settled.
+const REVEAL_MS = 180;
 
 const TABLE_GREEN = "#2db85a";
 const TABLE_APRON = "#1a7a44";
@@ -284,7 +295,7 @@ function GameLoop({
   controllersRef: MutableRefObject<Player[]>;
   testRef: MutableRefObject<boolean>;
   lastRef: MutableRefObject<LastThrowInfo | null>;
-  setMatch: (next: Match) => void;
+  setMatch: Dispatch<SetStateAction<Match>>;
   setLastThrow: (next: LastThrowInfo) => void;
   setGlowCup: (id: string | null) => void;
 }) {
@@ -305,9 +316,12 @@ function GameLoop({
       setGlowCup(null);
       ballRef.current = null;
       acc.current = 0;
-      setMatch(
+      // Resolve against React's latest match. A room/player update can render
+      // during the reveal, and applying to the captured match could otherwise
+      // replace a just-removed cup with an older rack.
+      setMatch((current) =>
         applyLanding(
-          matchRef.current,
+          current,
           controllersRef.current,
           testRef.current,
           landed.sunkId,
@@ -406,17 +420,18 @@ export function BeerPongScene({
 
   const playersKey = rosterKey(controllers);
   useEffect(() => {
-    const next = testRef.current
-      ? syncTestPlayers(matchRef.current, controllersRef.current)
-      : syncPlayers(matchRef.current, controllersRef.current);
-    setMatch(next);
+    setMatch((current) =>
+      testRef.current
+        ? syncTestPlayers(current, controllersRef.current)
+        : syncPlayers(current, controllersRef.current),
+    );
   }, [playersKey, testing]);
 
   useEffect(() => {
     if (testing || match.phase !== "over" || !match.endedAt) return;
     const wait = Math.max(400, REMATCH_MS - (Date.now() - match.endedAt));
     const timer = window.setTimeout(() => {
-      setMatch(rematch(matchRef.current, controllersRef.current));
+      setMatch((current) => rematch(current, controllersRef.current));
     }, wait);
     return () => window.clearTimeout(timer);
   }, [match.phase, match.endedAt, testing]);
@@ -462,7 +477,7 @@ export function BeerPongScene({
       if (action.type === "resetCups") {
         ballRef.current = null;
         setGlowCup(null);
-        setMatch(refillCups(matchRef.current));
+        setMatch((current) => refillCups(current));
         continue;
       }
       if (action.type !== "throw") continue;
@@ -505,7 +520,11 @@ export function BeerPongScene({
         targetZ: target.z,
         result: "air",
       });
-      setMatch(beginFlight(current));
+      setMatch((latest) =>
+        latest.phase === "aim" && (tester || currentId(latest) === shooter)
+          ? beginFlight(latest)
+          : latest,
+      );
     }
   }, [actionsByPlayer, calibByPlayer, from, gyroByPlayer]);
 
@@ -596,7 +615,7 @@ export function BeerPongScene({
         onResetCups={() => {
           ballRef.current = null;
           setGlowCup(null);
-          setMatch(refillCups(matchRef.current));
+          setMatch((current) => refillCups(current));
         }}
         lastThrow={lastThrow}
       />

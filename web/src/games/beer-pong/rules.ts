@@ -274,7 +274,9 @@ export function applySink(
   cupId: string,
   bounce: boolean,
 ): Match {
-  const made = match.cups.find((cup) => cup.id === cupId);
+  // The physics only reports live cups, but retain that invariant here too:
+  // delayed landing resolution must never score an already-removed cup.
+  const made = match.cups.find((cup) => cup.id === cupId && cup.live);
   if (!made) return { ...match, phase: "aim" };
 
   let cups = match.cups.map((cup) => (cup.id === cupId ? { ...cup, live: false } : cup));
@@ -350,7 +352,7 @@ export function syncTestPlayers(match: Match, controllers: Player[]): Match {
 }
 
 export function applyTestSink(match: Match, cupId: string, bounce: boolean): Match {
-  const made = match.cups.find((cup) => cup.id === cupId);
+  const made = match.cups.find((cup) => cup.id === cupId && cup.live);
   if (!made) return { ...match, phase: "aim", message: "Test. Throw anytime." };
   let cups = match.cups.map((cup) => (cup.id === cupId ? { ...cup, live: false } : cup));
   if (bounce) {
