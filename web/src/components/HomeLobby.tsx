@@ -72,7 +72,7 @@ export function HomeLobby() {
 
       {phase === "overlay" ? (
         <video
-          className="pointer-events-none absolute bottom-[3vh] left-1/2 z-[9] h-auto w-[min(52vw,30rem)] -translate-x-1/2"
+          className="pointer-events-none absolute bottom-0 left-1/2 z-[9] block h-auto w-[min(96vw,90rem)] -translate-x-1/2"
           src="/landing-overlay.webm"
           muted
           playsInline
@@ -86,10 +86,10 @@ export function HomeLobby() {
       <img
         src="/bearlympics.png"
         alt="Bearlympics"
-        className={`pointer-events-none absolute left-1/2 z-10 origin-top object-contain mix-blend-screen drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)] transition-[top,width,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+        className={`pointer-events-none absolute left-1/2 top-[7%] z-10 w-[min(86vw,46rem)] origin-top object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.28)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
           done
-            ? "top-[7%] w-[min(86vw,46rem)] -translate-x-1/2 opacity-100"
-            : "-top-[28%] w-[min(42vw,20rem)] -translate-x-1/2 opacity-0"
+            ? "-translate-x-1/2 translate-y-0 scale-100"
+            : "-translate-x-1/2 -translate-y-[130%] scale-50"
         }`}
       />
 
