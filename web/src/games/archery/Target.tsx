@@ -12,17 +12,17 @@ import { windStrength, type Wind } from "./wind";
 export const TARGET_Z = -9;
 export const TARGET_Y = 1.45;
 /** Outer edge of the painted face. Aim of 1 lands on that ring. */
-export const TARGET_RADIUS = 1.6;
+export const TARGET_RADIUS = 1.6 / 1.5;
 
 const ACCENT = "#0057FF";
 const BOW_ORIGIN = new THREE.Vector3(0, 1.5, 1.4);
 const FLIGHT_MS = 420;
 
-// 1024² watercolor. The inner dark disc is left of the square's center;
-// the extra straw on the right is the cylinder wall, not the scoring face.
+// 1024² watercolor. The inner dark disc is left of the square and a hair
+// below the midline; straw on the right is the cylinder wall, not the face.
 const SCAN = 1024;
-const BULLSEYE_X = 474.1;
-const BULLSEYE_Y = 479.3;
+const BULLSEYE_X = 468.7;
+const BULLSEYE_Y = 518.1;
 const FACE_RADIUS_PX = 280;
 const PLANE = (SCAN / FACE_RADIUS_PX) * TARGET_RADIUS;
 const OFFSET_X = (0.5 - BULLSEYE_X / SCAN) * PLANE;
