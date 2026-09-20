@@ -116,11 +116,12 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
     ball.bounced = true;
     ball.bounceCount += 1;
     const incoming = Math.abs(ball.vel.y);
-    const rest = ball.bounceCount === 1 ? 0.7 : 0.5;
-    ball.vel.y = Math.max(incoming * rest, ball.bounceCount === 1 ? 1.15 : 0);
-    if (ball.bounceCount >= 3 && incoming < 0.28) ball.vel.y = 0;
-    ball.vel.x *= 0.84;
-    ball.vel.z *= 0.84;
+    const rest = ball.bounceCount === 1 ? 0.82 : ball.bounceCount === 2 ? 0.58 : 0.36;
+    const minUp = ball.bounceCount === 1 ? 1.55 : ball.bounceCount === 2 ? 0.62 : 0;
+    ball.vel.y = Math.max(incoming * rest, minUp);
+    if (ball.bounceCount >= 4 && incoming < 0.22) ball.vel.y = 0;
+    ball.vel.x *= 0.86;
+    ball.vel.z *= 0.86;
   }
 
   if (ball.pos.y < BALL.radius && ball.vel.y <= 0) {
@@ -134,7 +135,7 @@ export function stepBall(ball: BallSim, cups: CupSlot[], dt: number) {
   const grounded =
     (onTable(ball.pos.x, ball.pos.z) && ball.pos.y <= tableTop + 0.002) ||
     ball.pos.y <= BALL.radius + 0.002;
-  if (ball.age > 0.85 && grounded && speed < 0.12 && (ball.bounceCount >= 2 || !ball.bounced)) {
+  if (ball.age > 1.2 && grounded && speed < 0.16 && (ball.bounceCount >= 2 || !ball.bounced)) {
     ball.settled = true;
     ball.vel.set(0, 0, 0);
   }

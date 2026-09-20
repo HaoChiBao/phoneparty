@@ -182,21 +182,32 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
       </mesh>
       {glowing ? (
         <>
-          <pointLight ref={light} color={GLOW} intensity={4.2} distance={2.8} position={[0, 0.05, 0]} />
+          <pointLight ref={light} color={GLOW} intensity={5.4} distance={3.4} position={[0, 0.18, 0]} />
+          <pointLight color="#fff4b8" intensity={2.2} distance={1.6} position={[0, 0.55, 0]} />
+          <spotLight
+            color={GLOW}
+            intensity={6.5}
+            distance={3.2}
+            angle={0.55}
+            penumbra={0.45}
+            position={[0, 0.02, 0]}
+          >
+            <object3D attach="target" position={[0, 1.4, 0]} />
+          </spotLight>
           <group ref={beams} position={[0, h / 2, 0]}>
             <mesh>
-              <cylinderGeometry args={[0.018, 0.05, 0.62, 12, 1, true]} />
-              <meshBasicMaterial color={GLOW} transparent opacity={0.42} side={THREE.DoubleSide} />
+              <cylinderGeometry args={[0.012, 0.068, 0.92, 14, 1, true]} />
+              <meshBasicMaterial color={GLOW} transparent opacity={0.48} side={THREE.DoubleSide} />
             </mesh>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <mesh key={i} rotation={[0.22, (i / 6) * Math.PI * 2, 0]} position={[0, 0.22, 0]}>
-                <coneGeometry args={[0.02, 0.58, 8, 1, true]} />
-                <meshBasicMaterial color="#fff4b0" transparent opacity={0.32} side={THREE.DoubleSide} />
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <mesh key={i} rotation={[0.28, (i / 8) * Math.PI * 2, 0]} position={[0, 0.34, 0]}>
+                <coneGeometry args={[0.018, 0.78, 8, 1, true]} />
+                <meshBasicMaterial color="#fff4b0" transparent opacity={0.38} side={THREE.DoubleSide} />
               </mesh>
             ))}
-            {[0.12, 0.28, 0.44].map((y) => (
+            {[0.16, 0.38, 0.6, 0.82].map((y) => (
               <mesh key={y} position={[0.01, y, 0.01]}>
-                <sphereGeometry args={[0.012, 10, 10]} />
+                <sphereGeometry args={[0.014, 10, 10]} />
                 <meshBasicMaterial color="#fff8d2" />
               </mesh>
             ))}
