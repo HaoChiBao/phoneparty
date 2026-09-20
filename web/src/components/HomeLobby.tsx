@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
 
@@ -30,12 +30,18 @@ const PLANKS = [
 
 export function HomeLobby() {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
+  const fieldRef = useRef<HTMLVideoElement>(null);
+  const [phase, setPhase] = useState<"intro" | "overlay" | "done">("intro");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const idle = phase === "idle";
   const done = phase === "done";
+
+  useEffect(() => {
+    const video = fieldRef.current;
+    if (!video) return;
+    const play = video.play();
+    if (play) play.catch(() => setPhase("overlay"));
+  }, []);
 
   async function hostGame(gameId: string) {
     if (busy) return;
@@ -50,49 +56,42 @@ export function HomeLobby() {
     }
   }
 
-  function goNext() {
-    const video = videoRef.current;
-    if (!video || !idle) return;
-    setPhase("playing");
-    const play = video.play();
-    if (play) play.catch(() => setPhase("done"));
-  }
-
   return (
     <main className="relative h-dvh overflow-hidden bg-[#7eb8e6]">
       <video
-        ref={videoRef}
+        ref={fieldRef}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
         src="/landing.mp4"
         poster="/landing-poster.jpg"
         muted
         playsInline
+        autoPlay
         preload="auto"
-        onEnded={() => setPhase("done")}
-        onLoadedData={(event) => {
-          event.currentTarget.currentTime = 0;
-          event.currentTarget.pause();
-        }}
+        onEnded={() => setPhase((current) => (current === "intro" ? "overlay" : current))}
       />
 
-      <div className="absolute left-1/2 top-1/2 z-10 flex w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col items-center px-6">
-        <img
-          src="/bearlympics.png"
-          alt="Bearlympics"
-          className="h-auto w-[min(78vw,40rem)] object-contain mix-blend-screen drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)]"
+      {phase === "overlay" ? (
+        <video
+          className="pointer-events-none absolute bottom-[3vh] left-1/2 z-[9] h-auto w-[min(52vw,30rem)] -translate-x-1/2"
+          src="/landing-overlay.webm"
+          muted
+          playsInline
+          autoPlay
+          preload="auto"
+          onEnded={() => setPhase("done")}
+          onError={() => setPhase("done")}
         />
-        <button
-          type="button"
-          onClick={goNext}
-          tabIndex={idle ? 0 : -1}
-          aria-hidden={!idle}
-          className={`mt-8 h-12 min-w-40 bg-accent px-8 text-[15px] font-medium text-white transition-opacity duration-300 motion-reduce:transition-none ${
-            idle ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-        >
-          Next
-        </button>
-      </div>
+      ) : null}
+
+      <img
+        src="/bearlympics.png"
+        alt="Bearlympics"
+        className={`pointer-events-none absolute left-1/2 z-10 origin-top object-contain mix-blend-screen drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)] transition-[top,width,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          done
+            ? "top-[7%] w-[min(86vw,46rem)] -translate-x-1/2 opacity-100"
+            : "-top-[28%] w-[min(42vw,20rem)] -translate-x-1/2 opacity-0"
+        }`}
+      />
 
       <div
         className={`absolute inset-x-0 bottom-0 z-10 flex justify-end transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
