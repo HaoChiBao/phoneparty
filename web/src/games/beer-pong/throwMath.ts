@@ -120,3 +120,48 @@ export function parseFlick(data: unknown): FlickVec {
     az: clamp(num("az"), -40, 40),
   };
 }
+
+export function sampleFromThrow(
+  data: unknown,
+  fallback?: GyroSample,
+): GyroSample | undefined {
+  if (typeof data !== "object" || data === null) return fallback;
+  const raw = data as Record<string, unknown>;
+  const num = (key: string) => {
+    const value = Number(raw[key]);
+    return Number.isFinite(value) ? value : null;
+  };
+  const alpha = num("alpha");
+  const beta = num("beta");
+  const gamma = num("gamma");
+  if (alpha === null && beta === null && gamma === null) return fallback;
+  return {
+    alpha: alpha ?? fallback?.alpha ?? 0,
+    beta: beta ?? fallback?.beta ?? 0,
+    gamma: gamma ?? fallback?.gamma ?? 0,
+    x: num("x") ?? fallback?.x ?? 0,
+    y: num("y") ?? fallback?.y ?? 0,
+    z: num("z") ?? fallback?.z ?? 0,
+    timestamp: num("timestamp") ?? fallback?.timestamp ?? Date.now(),
+  };
+}
+
+export function throwPayload(
+  flick: FlickVec,
+  sample: GyroSample | null,
+): Record<string, number> {
+  return {
+    power: flick.power,
+    peak: flick.peak,
+    ax: flick.ax,
+    ay: flick.ay,
+    az: flick.az,
+    alpha: sample?.alpha ?? 0,
+    beta: sample?.beta ?? 0,
+    gamma: sample?.gamma ?? 0,
+    x: sample?.x ?? 0,
+    y: sample?.y ?? 0,
+    z: sample?.z ?? 0,
+    timestamp: sample?.timestamp ?? Date.now(),
+  };
+}

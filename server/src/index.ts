@@ -266,7 +266,8 @@ io.on("connection", (socket) => {
 
   socket.on("gameAction", (payload) => {
     const roomCode = socket.data.roomCode;
-    if (!roomCode || socket.data.role !== "controller") return;
+    const role = socket.data.role;
+    if (!roomCode || (role !== "controller" && role !== "host")) return;
     const now = Date.now();
     const previous = lastGameActionAt.get(socket.id) ?? 0;
     if (now - previous < GAME_ACTION_MIN_INTERVAL_MS) return;

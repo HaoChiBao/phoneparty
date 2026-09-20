@@ -3,6 +3,7 @@
 import type { Player } from "@/lib/protocol";
 import { currentId, liveCups, teamName, type Match } from "./rules";
 import type { LastThrowInfo } from "./TestPanel";
+import { LIVE_GREEN } from "./view";
 
 export function TurnHud({
   match,
@@ -52,13 +53,13 @@ export function TurnHud({
     detail = "Calibrate at the TV, then flick";
   } else if (match.redemption) {
     title = shooter?.name ?? "Redemption";
-    detail = "Redemption. Flick the phone to throw.";
+    detail = "Redemption. That phone is green. Flick to throw.";
   } else if (match.overtime) {
     title = shooter?.name ?? "Overtime";
-    detail = "Overtime. Flick the phone to throw.";
+    detail = "Overtime. That phone is green. Flick to throw.";
   } else if (shooter) {
     title = shooter.name;
-    detail = "Flick the phone to throw";
+    detail = "That phone is green. Flick to throw";
   }
 
   return (
@@ -82,7 +83,15 @@ export function TurnHud({
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-16 z-10 flex justify-center px-4">
         <div className="min-w-[16rem] bg-white/92 px-5 py-3 text-center">
-          <div className="mx-auto mb-2 h-1 w-12" style={{ background: accent }} />
+          <div
+            className="mx-auto mb-2 h-1 w-12"
+            style={{
+              background:
+                !testing && match.phase === "aim" && shooterCalibrated
+                  ? LIVE_GREEN
+                  : accent,
+            }}
+          />
           <p className="text-[11px] uppercase tracking-[0.2em] text-black/40">
             {testing
               ? "Test"
@@ -96,6 +105,14 @@ export function TurnHud({
           </p>
           <p className="mt-1 text-2xl font-bold tracking-tight">{title}</p>
           <p className="mt-1 text-sm text-black/55">{detail}</p>
+          {!testing && match.phase === "aim" && shooter ? (
+            <p
+              className="mt-2 text-[11px] uppercase tracking-[0.2em]"
+              style={{ color: shooterCalibrated ? LIVE_GREEN : accent }}
+            >
+              {shooterCalibrated ? "Phone live" : "Waiting on calibrate"}
+            </p>
+          ) : null}
         </div>
       </div>
     </>

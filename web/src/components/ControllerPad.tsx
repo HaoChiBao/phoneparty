@@ -180,7 +180,7 @@ export function ControllerPad({ code }: { code: string }) {
             : !connected
               ? "Joining the room…"
               : hideAimPad && showCalibrate
-                ? "You are in the room. Enable motion, then calibrate before you throw."
+                ? "Enable motion, calibrate, then wait for your screen to turn green when it is your throw."
                 : hideAimPad
                 ? "You are in the room. Enable motion, then follow the prompt below."
                 : "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."}
@@ -273,7 +273,7 @@ export function ControllerPad({ code }: { code: string }) {
         ) : null}
         <p className="text-center text-xs text-black/40">
           {hideAimPad && showCalibrate
-            ? "Calibrate once, then flick. A straight flick aims at the middle of the cups. iPhones need HTTPS and a tap before sensors stream."
+            ? "Calibrate once and wait for green. A straight flick aims at the middle of the cups. iPhones need HTTPS and a tap before sensors stream."
             : hideAimPad
               ? "Hold the phone like a paw. Swing when the screen goes green. iPhones need HTTPS and a tap before sensors stream."
               : "Aim with the front of the phone, the camera-facing side. iPhones need HTTPS and a tap before sensors stream. On a computer, drag the remote."}

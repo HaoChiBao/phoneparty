@@ -1,16 +1,17 @@
 "use client";
 
-import { PerspectiveCamera } from "@react-three/drei";
+import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import { MatteMaterial } from "@/games/shared/MatteMaterial";
+import { ShadowLight } from "@/games/shared/ShadowLight";
 import type { Player } from "@/lib/protocol";
 import type { GameSceneProps } from "@/games/types";
 import { cameraPose } from "./camera";
 import { BALL, CUP, TABLE, launchPoint, type CupSlot, type TeamId } from "./layout";
-import { parseFlick, throwNudge, throwTarget, type ThrowReadout } from "./throwMath";
+import { parseFlick, sampleFromThrow, throwNudge, throwTarget, type ThrowReadout } from "./throwMath";
 import {
   applyMiss,
   applySink,
@@ -29,6 +30,7 @@ import { TestPanel, type LastThrowInfo } from "./TestPanel";
 import { TurnHud } from "./TurnHud";
 import { createBall, stepBall, velocityToHit, type BallSim } from "./physics";
 import { DEFAULT_TUNE, type ThrowTune } from "./tune";
+import { actionOn, PONG_SYNC, viewFromMatch } from "./view";
 
 const REMATCH_MS = 7000;
 const REVEAL_MS = 2600;
@@ -61,11 +63,11 @@ function Table() {
   ];
   return (
     <group>
-      <mesh position={[0, topY, 0]} receiveShadow>
+      <mesh castShadow receiveShadow position={[0, topY, 0]}>
         <boxGeometry args={[TABLE.length + 0.05, TABLE.thickness, TABLE.width + 0.05]} />
         <MatteMaterial color={TABLE_APRON} />
       </mesh>
-      <mesh position={[0, surfaceY, 0]} receiveShadow>
+      <mesh receiveShadow position={[0, surfaceY, 0]}>
         <boxGeometry args={[TABLE.length, 0.006, TABLE.width]} />
         <MatteMaterial color={TABLE_GREEN} />
       </mesh>
@@ -99,18 +101,22 @@ function Table() {
           <MatteMaterial color="#f2f2f2" />
         </mesh>
       ))}
-      <mesh position={[0, TABLE.height + netH - 0.005, 0]}>
+      <mesh castShadow position={[0, TABLE.height + netH - 0.005, 0]}>
         <boxGeometry args={[0.016, 0.014, playW - 0.012]} />
         <MatteMaterial color="#ffffff" />
       </mesh>
       {([-playW / 2 + 0.01, playW / 2 - 0.01] as const).map((z) => (
-        <mesh key={z} position={[0, netY, z]}>
+        <mesh key={z} castShadow position={[0, netY, z]}>
           <cylinderGeometry args={[0.012, 0.012, netH + 0.02, 12]} />
           <MatteMaterial color="#e0e0e0" />
         </mesh>
       ))}
       {legs.map(([x, z]) => (
-        <mesh key={`${x}:${z}`} position={[x, TABLE.height / 2 - TABLE.thickness / 2, z]}>
+        <mesh
+          key={`${x}:${z}`}
+          castShadow
+          position={[x, TABLE.height / 2 - TABLE.thickness / 2, z]}
+        >
           <boxGeometry args={[leg, TABLE.height - TABLE.thickness, leg]} />
           <MatteMaterial color="#3a3a3a" />
         </mesh>
@@ -134,7 +140,7 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
   const innerBase = CUP.baseRadius - 0.0022;
   return (
     <group position={[cup.x, TABLE.height + h / 2, cup.z]}>
-      <mesh>
+      <mesh castShadow receiveShadow>
         <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, h, 28, 1, true]} />
         <meshStandardMaterial
           color={CUP_ORANGE}
@@ -153,7 +159,7 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
           emissiveIntensity={glowing ? 2.1 : 0}
         />
       </mesh>
-      <mesh position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh castShadow position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[CUP.baseRadius, 24]} />
         <meshStandardMaterial
           color={CUP_ORANGE}
@@ -231,7 +237,7 @@ function BallMesh({ ballRef }: { ballRef: RefObject<BallSim | null> }) {
     mesh.current.position.copy(ball.pos);
   });
   return (
-    <mesh ref={mesh} visible={false}>
+    <mesh ref={mesh} castShadow visible={false}>
       <sphereGeometry args={[BALL.radius, 24, 24]} />
       <MatteMaterial color="#ffffff" />
     </mesh>
@@ -274,6 +280,8 @@ function GameLoop({
 }) {
   const pending = useRef<{ sunkId: string | null; bounced: boolean } | null>(null);
   const revealAt = useRef(0);
+  const acc = useRef(0);
+  const tracked = useRef<BallSim | null>(null);
   useFrame((_, dt) => {
     if (pending.current) {
       if (matchRef.current.phase !== "flight") {
@@ -286,6 +294,7 @@ function GameLoop({
       pending.current = null;
       setGlowCup(null);
       ballRef.current = null;
+      acc.current = 0;
       setMatch(
         applyLanding(
           matchRef.current,
@@ -299,8 +308,20 @@ function GameLoop({
     }
     const ball = ballRef.current;
     if (!ball || ball.settled) return;
-    stepBall(ball, matchRef.current.cups, dt);
+    if (tracked.current !== ball) {
+      tracked.current = ball;
+      acc.current = 0;
+    }
+    acc.current += Math.min(Math.max(dt, 0), 0.05);
+    const step = 1 / 60;
+    let guard = 0;
+    while (acc.current >= step && !ball.settled && guard < 8) {
+      stepBall(ball, matchRef.current.cups, step);
+      acc.current -= step;
+      guard += 1;
+    }
     if (!ball.settled) return;
+    acc.current = 0;
     const result = ball.sunkId
       ? ball.bounced
         ? "bounce"
@@ -341,17 +362,12 @@ function rosterKey(controllers: Player[]) {
   return controllers.map((player) => `${player.id}:${player.name}`).join("|");
 }
 
-function actionOn(data: unknown, fallback = true) {
-  if (typeof data !== "object" || data === null) return fallback;
-  if (!("on" in data)) return fallback;
-  return Boolean((data as { on?: unknown }).on);
-}
-
 export function BeerPongScene({
   controllers,
   gyroByPlayer,
   calibByPlayer,
   actionsByPlayer,
+  sendAction,
 }: GameSceneProps) {
   const [match, setMatch] = useState<Match>(() => emptyMatch());
   const [testing, setTesting] = useState(false);
@@ -445,9 +461,11 @@ export function BeerPongScene({
       if (!calib) continue;
       const team = current.teamOf[shooter] ?? "a";
       const flick = parseFlick(action.data);
+      const pose = sampleFromThrow(action.data, gyroByPlayer[shooter]);
+      if (!pose && !tester) continue;
       const feel = tuneRef.current;
       const nudge = throwNudge(
-        gyroByPlayer[shooter],
+        pose,
         calib,
         team,
         current.cups,
@@ -477,6 +495,17 @@ export function BeerPongScene({
     }
   }, [actionsByPlayer, calibByPlayer, from, gyroByPlayer]);
 
+  const snapshot = viewFromMatch(match, controllers, {
+    testing,
+    lastResult: lastThrow?.result ?? null,
+  });
+  const snapshotKey = JSON.stringify(snapshot);
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+  useEffect(() => {
+    sendAction?.(PONG_SYNC, snapshotRef.current);
+  }, [sendAction, snapshotKey]);
+
   const shooter = currentId(match);
   const shooterTeam = shooter ? (match.teamOf[shooter] ?? null) : null;
   const movingId = controllers.reduce<string | null>((best, player) => {
@@ -497,13 +526,29 @@ export function BeerPongScene({
         <color attach="background" args={["#ffffff"]} />
         <TurnCamera team={viewTeam} phase={viewPhase} />
         <ambientLight intensity={0.95} />
-        <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.15} />
+        <ShadowLight position={[2.2, 5.4, 3.2]} intensity={1.15} coverage={6} />
         <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
           <planeGeometry args={[14, 12]} />
           <MatteMaterial color="#ffffff" />
         </mesh>
+        <ContactShadows
+          position={[0, 0.015, 0]}
+          opacity={0.3}
+          scale={10}
+          blur={2.4}
+          far={1.4}
+          color="#1a1a1a"
+        />
         <Table />
+        <ContactShadows
+          position={[0, TABLE.height + 0.008, 0]}
+          opacity={0.42}
+          scale={3.4}
+          blur={1.25}
+          far={0.9}
+          color="#102010"
+        />
         {match.cups.map((cup) => (
           <CupMesh key={cup.id} cup={cup} glowing={cup.id === glowCup} />
         ))}
