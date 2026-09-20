@@ -142,15 +142,6 @@ function Table() {
   );
 }
 
-function GrassFloor() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[28, 22]} />
-      <MatteMaterial color="#5dad3a" />
-    </mesh>
-  );
-}
-
 function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
   const light = useRef<THREE.PointLight>(null);
   const beams = useRef<THREE.Group>(null);
@@ -586,15 +577,6 @@ export function BeerPongScene({
         <ambientLight intensity={0.95} />
         <ShadowLight position={[2.2, 5.4, 3.2]} intensity={1.15} coverage={6} />
         <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
-        <GrassFloor />
-        <ContactShadows
-          position={[0, 0.015, 0]}
-          opacity={0.3}
-          scale={10}
-          blur={2.4}
-          far={1.4}
-          color="#1a1a1a"
-        />
         <Table />
         <ContactShadows
           position={[0, TABLE.height + 0.008, 0]}
