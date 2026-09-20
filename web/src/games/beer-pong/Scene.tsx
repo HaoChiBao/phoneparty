@@ -33,7 +33,7 @@ import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 import { actionOn, PONG_SYNC, viewFromMatch } from "./view";
 
 const REMATCH_MS = 7000;
-const REVEAL_MS = 2600;
+const REVEAL_MS = 1000;
 
 const TABLE_GREEN = "#2db85a";
 const TABLE_APRON = "#1a7a44";

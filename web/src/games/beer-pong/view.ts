@@ -14,7 +14,7 @@ import type { LastThrowInfo } from "./TestPanel";
 
 export const PONG_SYNC = "pong";
 export const LIVE_GREEN = "#16a34a";
-const FLIGHT_HOLD_MS = 4000;
+const FLIGHT_HOLD_MS = 2500;
 
 export type PongSync = {
   phase: Phase;
