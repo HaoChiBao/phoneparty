@@ -17,7 +17,7 @@ const PLANKS = [
     style: { left: "27%", top: "34%", width: "62.1%", height: "12.9%" },
   },
   {
-    label: "Beer pong",
+    label: "Bear pong",
     gameId: "beer-pong",
     style: { left: "13.1%", top: "52.7%", width: "61.7%", height: "12.9%" },
   },

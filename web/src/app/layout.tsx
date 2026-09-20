@@ -3,7 +3,8 @@ import { preload } from "react-dom";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Phone Party",
+  title: "Bearlympics",
+  applicationName: "Bearlympics",
   description: "Phone gyro remotes for a shared 3D room.",
 };
 

@@ -47,7 +47,7 @@ export type GameDefinition = {
   hideAimPad?: boolean;
   // Keep the shared Calibrate button when the aim pad is hidden.
   showCalibrate?: boolean;
-  // Gesture names for the shared motion recorder ("bear hit", "beer pong flick").
+  // Gesture names for the shared motion recorder ("bear hit", "bear pong flick").
   motionLabels?: MotionLabel[];
   // Phone how-to copy. Shown on the controller when the game opens.
   howToPlay?: string;
