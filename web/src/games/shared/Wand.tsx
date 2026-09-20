@@ -3,6 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import { setRelativeQuaternion } from "@/lib/orientation";
 import type { CalibratedPose, GyroSample, Player } from "@/lib/protocol";
 
@@ -69,24 +70,20 @@ export function Wand({ player, sample, calib }: WandState) {
       <group ref={group} position={[0, 1.15, 3.4]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.18]}>
           <cylinderGeometry args={[0.045, 0.055, 0.72, 16]} />
-          <meshStandardMaterial color="#111111" metalness={0.2} roughness={0.4} />
+          <MatteMaterial color="#3a3a3a" />
         </mesh>
         <mesh position={[0, 0, -0.22]}>
           <sphereGeometry args={[0.07, 20, 20]} />
-          <meshStandardMaterial
-            color={player.color}
-            emissive={player.color}
-            emissiveIntensity={0.8}
-          />
+          <MatteMaterial color={player.color} />
         </mesh>
         <mesh ref={beam} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 1, 8]} />
-          <meshBasicMaterial color={player.color} transparent opacity={0.7} />
+          <MatteMaterial color={player.color} transparent opacity={0.78} />
         </mesh>
       </group>
       <mesh ref={hit} visible={false}>
         <sphereGeometry args={[0.12, 16, 16]} />
-        <meshBasicMaterial color={player.color} />
+        <MatteMaterial color={player.color} />
       </mesh>
     </>
   );

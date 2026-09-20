@@ -2,6 +2,7 @@
 
 import { Grid, PerspectiveCamera } from "@react-three/drei";
 import { HostCanvas } from "@/games/shared/HostCanvas";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import { Wand, wandsFromControllers } from "@/games/shared/Wand";
 import type { GameSceneProps } from "@/games/types";
 
@@ -16,7 +17,7 @@ function Targets() {
       {spots.map(([x, y, z]) => (
         <mesh key={`${x}-${y}`} position={[x, y, z]}>
           <ringGeometry args={[0.28, 0.38, 32]} />
-          <meshBasicMaterial color="#0057FF" />
+          <MatteMaterial color="#4c8dff" />
         </mesh>
       ))}
     </group>
@@ -31,10 +32,9 @@ function Stage({ wands }: { wands: ReturnType<typeof wandsFromControllers> }) {
       <PerspectiveCamera makeDefault position={[0, 1.6, 6.4]} fov={55} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={1.1} />
-      <pointLight position={[0, 3, -4]} intensity={6} color="#0057FF" distance={14} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[18, 16]} />
-        <meshStandardMaterial color="#ffffff" />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <Grid
         args={[18, 16]}
@@ -49,7 +49,7 @@ function Stage({ wands }: { wands: ReturnType<typeof wandsFromControllers> }) {
       />
       <mesh position={[0, 2.4, -6]}>
         <planeGeometry args={[12, 5.2]} />
-        <meshStandardMaterial color="#ffffff" />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <Targets />
       {wands.map((wand) => (

@@ -1,15 +1,16 @@
 "use client";
 
 import { PerspectiveCamera } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import { HostCanvas } from "@/games/shared/HostCanvas";
-import type { CalibratedPose, GyroSample, Player } from "@/lib/protocol";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
+import type { Player } from "@/lib/protocol";
 import type { GameSceneProps } from "@/games/types";
-import { computeAim, createAimScratch, snapshotAim, type AimSnapshot } from "./aimMath";
 import { cameraPose } from "./camera";
 import { BALL, CUP, TABLE, launchPoint, type CupSlot, type TeamId } from "./layout";
+import { parseFlick, throwNudge, throwTarget, type ThrowReadout } from "./throwMath";
 import {
   applyMiss,
   applySink,
@@ -26,17 +27,28 @@ import {
 } from "./rules";
 import { TestPanel, type LastThrowInfo } from "./TestPanel";
 import { TurnHud } from "./TurnHud";
-import { createBall, stepBall, targetFromAim, velocityToHit, type BallSim } from "./physics";
+import { createBall, stepBall, velocityToHit, type BallSim } from "./physics";
 import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 
 const REMATCH_MS = 7000;
+const REVEAL_MS = 2600;
 
-function teamColor(team: TeamId) {
-  return team === "a" ? "#0057FF" : "#111111";
-}
+const TABLE_GREEN = "#2db85a";
+const TABLE_APRON = "#1a7a44";
+const CUP_ORANGE = "#EBA02A";
+const CUP_WHITE = "#ffffff";
+const GLOW = "#FFE27A";
 
 function Table() {
   const topY = TABLE.height - TABLE.thickness / 2;
+  const surfaceY = topY + TABLE.thickness / 2 + 0.003;
+  const lineY = surfaceY + 0.004;
+  const line = 0.018;
+  const thin = 0.01;
+  const playL = TABLE.length;
+  const playW = TABLE.width;
+  const netH = 0.152;
+  const netY = TABLE.height + netH / 2;
   const leg = 0.045;
   const inset = 0.08;
   const hx = TABLE.length / 2 - inset;
@@ -50,40 +62,158 @@ function Table() {
   return (
     <group>
       <mesh position={[0, topY, 0]} receiveShadow>
-        <boxGeometry args={[TABLE.length, TABLE.thickness, TABLE.width]} />
-        <meshStandardMaterial color="#f3f4f7" />
+        <boxGeometry args={[TABLE.length + 0.05, TABLE.thickness, TABLE.width + 0.05]} />
+        <MatteMaterial color={TABLE_APRON} />
       </mesh>
-      <mesh position={[0, topY + TABLE.thickness / 2 + 0.002, 0]}>
-        <boxGeometry args={[TABLE.length - 0.04, 0.004, TABLE.width - 0.04]} />
-        <meshStandardMaterial color="#ffffff" />
+      <mesh position={[0, surfaceY, 0]} receiveShadow>
+        <boxGeometry args={[TABLE.length, 0.006, TABLE.width]} />
+        <MatteMaterial color={TABLE_GREEN} />
       </mesh>
+      <mesh position={[0, lineY, playW / 2 - line / 2]}>
+        <boxGeometry args={[playL, 0.003, line]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[0, lineY, -playW / 2 + line / 2]}>
+        <boxGeometry args={[playL, 0.003, line]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[playL / 2 - line / 2, lineY, 0]}>
+        <boxGeometry args={[line, 0.003, playW]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[-playL / 2 + line / 2, lineY, 0]}>
+        <boxGeometry args={[line, 0.003, playW]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[0, lineY, 0]}>
+        <boxGeometry args={[playL, 0.003, thin]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[0, netY - 0.006, 0]}>
+        <boxGeometry args={[0.01, netH - 0.012, playW - 0.03]} />
+        <MatteMaterial color="#3a3a3a" transparent opacity={0.55} />
+      </mesh>
+      {[-0.045, -0.02, 0.005, 0.03, 0.055].map((y) => (
+        <mesh key={y} position={[0, TABLE.height + netH / 2 + y, 0]}>
+          <boxGeometry args={[0.012, 0.004, playW - 0.03]} />
+          <MatteMaterial color="#f2f2f2" />
+        </mesh>
+      ))}
+      <mesh position={[0, TABLE.height + netH - 0.005, 0]}>
+        <boxGeometry args={[0.016, 0.014, playW - 0.012]} />
+        <MatteMaterial color="#ffffff" />
+      </mesh>
+      {([-playW / 2 + 0.01, playW / 2 - 0.01] as const).map((z) => (
+        <mesh key={z} position={[0, netY, z]}>
+          <cylinderGeometry args={[0.012, 0.012, netH + 0.02, 12]} />
+          <MatteMaterial color="#e0e0e0" />
+        </mesh>
+      ))}
       {legs.map(([x, z]) => (
         <mesh key={`${x}:${z}`} position={[x, TABLE.height / 2 - TABLE.thickness / 2, z]}>
           <boxGeometry args={[leg, TABLE.height - TABLE.thickness, leg]} />
-          <meshStandardMaterial color="#111111" />
+          <MatteMaterial color="#3a3a3a" />
         </mesh>
       ))}
     </group>
   );
 }
 
-function CupMesh({ cup }: { cup: CupSlot }) {
+function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
+  const light = useRef<THREE.PointLight>(null);
+  const beams = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (!glowing || !cup.live) return;
+    const pulse = 0.7 + Math.sin(clock.elapsedTime * 11) * 0.3;
+    if (light.current) light.current.intensity = 2.8 + pulse * 2.4;
+    if (beams.current) beams.current.position.y = pulse * 0.03;
+  });
   if (!cup.live) return null;
-  const color = teamColor(cup.team);
+  const h = CUP.height;
+  const innerRim = CUP.rimRadius - 0.0026;
+  const innerBase = CUP.baseRadius - 0.0022;
   return (
-    <group position={[cup.x, TABLE.height + CUP.height / 2, cup.z]}>
+    <group position={[cup.x, TABLE.height + h / 2, cup.z]}>
       <mesh>
-        <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, CUP.height, 20, 1, true]} />
-        <meshStandardMaterial color={color} side={THREE.DoubleSide} roughness={0.45} />
+        <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, h, 28, 1, true]} />
+        <meshStandardMaterial
+          color={CUP_ORANGE}
+          roughness={0.36}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.6 : 0}
+        />
       </mesh>
-      <mesh position={[0, -CUP.height / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[CUP.baseRadius, 20]} />
-        <meshStandardMaterial color={color} />
+      <mesh>
+        <cylinderGeometry args={[innerRim, innerBase, h - 0.004, 28, 1, true]} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          side={THREE.BackSide}
+          roughness={0.18}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 2.1 : 0}
+        />
       </mesh>
-      <mesh position={[0, -CUP.height / 2 + 0.028, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[CUP.baseRadius * 0.82, 16]} />
-        <meshBasicMaterial color={cup.team === "a" ? "#0039B3" : "#2a2a2a"} transparent opacity={0.55} />
+      <mesh position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[CUP.baseRadius, 24]} />
+        <meshStandardMaterial
+          color={CUP_ORANGE}
+          roughness={0.36}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.2 : 0}
+        />
       </mesh>
+      <mesh position={[0, -h / 2 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[innerBase, 24]} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          roughness={0.18}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 2.4 : 0}
+        />
+      </mesh>
+      <mesh position={[0, h / 2 - 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[innerRim - 0.001, CUP.rimRadius + 0.003, 28]} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          roughness={0.2}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.8 : 0}
+        />
+      </mesh>
+      {glowing ? (
+        <>
+          <pointLight ref={light} color={GLOW} intensity={5.4} distance={3.4} position={[0, 0.18, 0]} />
+          <pointLight color="#fff4b8" intensity={2.2} distance={1.6} position={[0, 0.55, 0]} />
+          <spotLight
+            color={GLOW}
+            intensity={6.5}
+            distance={3.2}
+            angle={0.55}
+            penumbra={0.45}
+            position={[0, 0.02, 0]}
+          >
+            <object3D attach="target" position={[0, 1.4, 0]} />
+          </spotLight>
+          <group ref={beams} position={[0, h / 2, 0]}>
+            <mesh>
+              <cylinderGeometry args={[0.012, 0.068, 0.92, 14, 1, true]} />
+              <meshBasicMaterial color={GLOW} transparent opacity={0.48} side={THREE.DoubleSide} />
+            </mesh>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <mesh key={i} rotation={[0.28, (i / 8) * Math.PI * 2, 0]} position={[0, 0.34, 0]}>
+                <coneGeometry args={[0.018, 0.78, 8, 1, true]} />
+                <meshBasicMaterial color="#fff4b0" transparent opacity={0.38} side={THREE.DoubleSide} />
+              </mesh>
+            ))}
+            {[0.16, 0.38, 0.6, 0.82].map((y) => (
+              <mesh key={y} position={[0.01, y, 0.01]}>
+                <sphereGeometry args={[0.014, 10, 10]} />
+                <meshBasicMaterial color="#fff8d2" />
+              </mesh>
+            ))}
+          </group>
+        </>
+      ) : null}
     </group>
   );
 }
@@ -103,88 +233,24 @@ function BallMesh({ ballRef }: { ballRef: RefObject<BallSim | null> }) {
   return (
     <mesh ref={mesh} visible={false}>
       <sphereGeometry args={[BALL.radius, 24, 24]} />
-      <meshStandardMaterial color="#f6f6f6" roughness={0.35} />
+      <MatteMaterial color="#ffffff" />
     </mesh>
   );
 }
 
-function AimPointer({
-  player,
-  sample,
-  calib,
-  aims,
-  readouts,
-  tuneRef,
-}: {
-  player: Player;
-  sample?: GyroSample;
-  calib?: CalibratedPose;
-  aims: MutableRefObject<Record<string, THREE.Vector3>>;
-  readouts: MutableRefObject<Record<string, AimSnapshot>>;
-  tuneRef: MutableRefObject<ThrowTune>;
-}) {
-  const group = useRef<THREE.Group>(null);
-  const beam = useRef<THREE.Mesh>(null);
-  const spot = useRef<THREE.Mesh>(null);
-  const firstPose = useRef<CalibratedPose | null>(null);
-  const scratch = useMemo(() => createAimScratch(), []);
-  const mid = useMemo(() => new THREE.Vector3(), []);
-  const along = useMemo(() => new THREE.Vector3(), []);
-  const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
-  const { camera } = useThree();
-
-  useFrame(() => {
-    if (!group.current || !sample) return;
-    if (!firstPose.current) {
-      firstPose.current = {
-        alpha: sample.alpha,
-        beta: sample.beta,
-        gamma: sample.gamma,
-        x: sample.x,
-        y: sample.y,
-        z: sample.z,
-      };
-    }
-    const readout = computeAim(
-      sample,
-      calib ?? firstPose.current,
-      tuneRef.current,
-      scratch,
-      { position: camera.position, quaternion: camera.quaternion },
-    );
-    group.current.quaternion.copy(scratch.quaternion);
-    group.current.position.copy(readout.origin);
-    aims.current[player.id] = readout.hit.clone();
-    readouts.current[player.id] = snapshotAim(readout);
-
-    if (spot.current) {
-      spot.current.position.set(readout.hit.x, TABLE.height + 0.008, readout.hit.z);
-      spot.current.visible = true;
-    }
-    if (beam.current) {
-      const length = Math.max(readout.origin.distanceTo(readout.hit), 0.05);
-      mid.copy(readout.origin).add(readout.hit).multiplyScalar(0.5);
-      along.copy(readout.hit).sub(readout.origin).normalize();
-      beam.current.position.copy(mid);
-      beam.current.quaternion.setFromUnitVectors(up, along);
-      beam.current.scale.set(1, length, 1);
-      beam.current.visible = true;
-    }
-  });
-
-  return (
-    <>
-      <group ref={group} position={[0, 1.85, 2.7]} />
-      <mesh ref={beam} visible={false}>
-        <cylinderGeometry args={[0.004, 0.004, 1, 8]} />
-        <meshBasicMaterial color={player.color} transparent opacity={0.5} />
-      </mesh>
-      <mesh ref={spot} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-        <ringGeometry args={[0.03, 0.05, 24]} />
-        <meshBasicMaterial color={player.color} />
-      </mesh>
-    </>
-  );
+function applyLanding(
+  match: Match,
+  controllers: Player[],
+  tester: boolean,
+  sunkId: string | null,
+  bounced: boolean,
+): Match {
+  if (tester) {
+    return sunkId
+      ? applyTestSink(match, sunkId, bounced)
+      : { ...match, phase: "aim" as const, message: "Test. Throw anytime." };
+  }
+  return sunkId ? applySink(match, controllers, sunkId, bounced) : applyMiss(match, controllers);
 }
 
 function GameLoop({
@@ -195,6 +261,7 @@ function GameLoop({
   lastRef,
   setMatch,
   setLastThrow,
+  setGlowCup,
 }: {
   matchRef: MutableRefObject<Match>;
   ballRef: MutableRefObject<BallSim | null>;
@@ -203,31 +270,51 @@ function GameLoop({
   lastRef: MutableRefObject<LastThrowInfo | null>;
   setMatch: (next: Match) => void;
   setLastThrow: (next: LastThrowInfo) => void;
+  setGlowCup: (id: string | null) => void;
 }) {
-  const resolving = useRef(false);
+  const pending = useRef<{ sunkId: string | null; bounced: boolean } | null>(null);
+  const revealAt = useRef(0);
   useFrame((_, dt) => {
+    if (pending.current) {
+      if (matchRef.current.phase !== "flight") {
+        pending.current = null;
+        setGlowCup(null);
+        return;
+      }
+      if (Date.now() < revealAt.current) return;
+      const landed = pending.current;
+      pending.current = null;
+      setGlowCup(null);
+      ballRef.current = null;
+      setMatch(
+        applyLanding(
+          matchRef.current,
+          controllersRef.current,
+          testRef.current,
+          landed.sunkId,
+          landed.bounced,
+        ),
+      );
+      return;
+    }
     const ball = ballRef.current;
-    if (!ball || ball.settled || resolving.current) return;
+    if (!ball || ball.settled) return;
     stepBall(ball, matchRef.current.cups, dt);
     if (!ball.settled) return;
-    resolving.current = true;
-    const match = matchRef.current;
-    const controllers = controllersRef.current;
-    const result = ball.sunkId ? (ball.bounced ? "bounce" : "sink") : "miss";
+    const result = ball.sunkId
+      ? ball.bounced
+        ? "bounce"
+        : "sink"
+      : ball.bounced
+        ? "bounce"
+        : "miss";
     const prev = lastRef.current;
     if (prev && prev.result === "air") {
       setLastThrow({ ...prev, result, cupId: ball.sunkId ?? undefined });
     }
-    const next = testRef.current
-      ? ball.sunkId
-        ? applyTestSink(match, ball.sunkId, ball.bounced)
-        : { ...match, phase: "aim" as const, message: "Test. Throw anytime." }
-      : ball.sunkId
-        ? applySink(match, controllers, ball.sunkId, ball.bounced)
-        : applyMiss(match, controllers);
-    ballRef.current = null;
-    setMatch(next);
-    resolving.current = false;
+    pending.current = { sunkId: ball.sunkId, bounced: ball.bounced };
+    revealAt.current = Date.now() + REVEAL_MS;
+    setGlowCup(ball.sunkId);
   });
   return null;
 }
@@ -247,13 +334,7 @@ function TurnCamera({ team, phase }: { team: TeamId | null; phase: Phase }) {
     camera.lookAt(look.current);
   });
 
-  return <PerspectiveCamera makeDefault position={[0, 2.25, 3.7]} fov={46} />;
-}
-
-function throwPowerFromData(data: unknown) {
-  if (typeof data !== "object" || data === null) return 1;
-  const power = Number((data as { power?: unknown }).power);
-  return Number.isFinite(power) ? THREE.MathUtils.clamp(power, 0.3, 2.4) : 1;
+  return <PerspectiveCamera makeDefault position={[0, 2.45, 1.55]} fov={40} />;
 }
 
 function rosterKey(controllers: Player[]) {
@@ -276,13 +357,12 @@ export function BeerPongScene({
   const [testing, setTesting] = useState(false);
   const [tune, setTune] = useState<ThrowTune>(DEFAULT_TUNE);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [aimSnap, setAimSnap] = useState<AimSnapshot | null>(null);
+  const [aimSnap, setAimSnap] = useState<ThrowReadout | null>(null);
   const [lastThrow, setLastThrow] = useState<LastThrowInfo | null>(null);
+  const [glowCup, setGlowCup] = useState<string | null>(null);
   const matchRef = useRef(match);
   matchRef.current = match;
   const ballRef = useRef<BallSim | null>(null);
-  const aims = useRef<Record<string, THREE.Vector3>>({});
-  const readouts = useRef<Record<string, AimSnapshot>>({});
   const handled = useRef<Record<string, number>>({});
   const controllersRef = useRef(controllers);
   controllersRef.current = controllers;
@@ -293,7 +373,6 @@ export function BeerPongScene({
   const lastRef = useRef(lastThrow);
   lastRef.current = lastThrow;
   const from = useMemo(() => new THREE.Vector3(), []);
-  const aim = useMemo(() => new THREE.Vector3(), []);
 
   const playersKey = rosterKey(controllers);
   useEffect(() => {
@@ -316,10 +395,29 @@ export function BeerPongScene({
     if (!testing) return;
     const timer = window.setInterval(() => {
       const id = focusId ?? currentId(matchRef.current) ?? controllersRef.current[0]?.id;
-      setAimSnap(id ? (readouts.current[id] ?? null) : null);
+      if (!id) {
+        setAimSnap(null);
+        return;
+      }
+      const calib = calibByPlayer[id];
+      const sample = gyroByPlayer[id];
+      if (!calib || !sample) {
+        setAimSnap(null);
+        return;
+      }
+      const team = matchRef.current.teamOf[id] ?? "a";
+      setAimSnap(
+        throwNudge(sample, calib, team, matchRef.current.cups, {
+          power: 1,
+          peak: 0,
+          ax: 0,
+          ay: 0,
+          az: 0,
+        }, tuneRef.current),
+      );
     }, 80);
     return () => window.clearInterval(timer);
-  }, [testing, focusId]);
+  }, [testing, focusId, calibByPlayer, gyroByPlayer]);
 
   useEffect(() => {
     for (const [playerId, action] of Object.entries(actionsByPlayer)) {
@@ -333,6 +431,7 @@ export function BeerPongScene({
       }
       if (action.type === "resetCups") {
         ballRef.current = null;
+        setGlowCup(null);
         setMatch(refillCups(matchRef.current));
         continue;
       }
@@ -342,18 +441,25 @@ export function BeerPongScene({
       if (!tester && current.phase !== "aim") continue;
       const shooter = tester ? playerId : currentId(current);
       if (!shooter || shooter !== playerId) continue;
+      const calib = calibByPlayer[shooter];
+      if (!calib) continue;
       const team = current.teamOf[shooter] ?? "a";
-      const raw =
-        aims.current[shooter] ?? new THREE.Vector3(team === "a" ? 0.9 : -0.9, TABLE.height, 0);
-      aim.copy(raw);
-      const target = targetFromAim(aim, current.cups);
-      const start = launchPoint(team, aim.z);
-      from.set(start.x, start.y, start.z);
+      const flick = parseFlick(action.data);
       const feel = tuneRef.current;
-      const flick = throwPowerFromData(action.data);
+      const nudge = throwNudge(
+        gyroByPlayer[shooter],
+        calib,
+        team,
+        current.cups,
+        flick,
+        feel,
+      );
+      const target = throwTarget(nudge);
+      const start = launchPoint(team, 0);
+      from.set(start.x, start.y, start.z);
       const vel = velocityToHit(from, target, {
         arc: feel.arc,
-        power: feel.power * flick,
+        power: feel.power,
       });
       ballRef.current = createBall(from, vel);
       const playerName =
@@ -362,14 +468,14 @@ export function BeerPongScene({
         name: playerName,
         speed: vel.length(),
         arcDeg: (feel.arc * 180) / Math.PI,
-        power: feel.power * flick,
+        power: feel.power,
         targetX: target.x,
         targetZ: target.z,
         result: "air",
       });
       setMatch(beginFlight(current));
     }
-  }, [actionsByPlayer, aim, from]);
+  }, [actionsByPlayer, calibByPlayer, from, gyroByPlayer]);
 
   const shooter = currentId(match);
   const shooterTeam = shooter ? (match.teamOf[shooter] ?? null) : null;
@@ -384,40 +490,24 @@ export function BeerPongScene({
     ? (watchId ? match.teamOf[watchId] : null) ?? shooterTeam ?? (controllers[0] ? "a" : null)
     : shooterTeam;
   const viewPhase = testing && controllers.length > 0 ? "aim" : match.phase;
-  const aimPlayers =
-    testing && match.phase !== "over"
-      ? controllers
-      : shooter && match.phase === "aim"
-        ? controllers.filter((player) => player.id === shooter)
-        : [];
 
   return (
     <>
       <HostCanvas>
         <color attach="background" args={["#ffffff"]} />
         <TurnCamera team={viewTeam} phase={viewPhase} />
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.05} />
+        <ambientLight intensity={0.95} />
+        <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.15} />
+        <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <planeGeometry args={[14, 12]} />
-          <meshStandardMaterial color="#ffffff" />
+          <MatteMaterial color="#ffffff" />
         </mesh>
         <Table />
         {match.cups.map((cup) => (
-          <CupMesh key={cup.id} cup={cup} />
+          <CupMesh key={cup.id} cup={cup} glowing={cup.id === glowCup} />
         ))}
         <BallMesh ballRef={ballRef} />
-        {aimPlayers.map((player) => (
-          <AimPointer
-            key={player.id}
-            player={player}
-            sample={gyroByPlayer[player.id]}
-            calib={calibByPlayer[player.id]}
-            aims={aims}
-            readouts={readouts}
-            tuneRef={tuneRef}
-          />
-        ))}
         <GameLoop
           matchRef={matchRef}
           ballRef={ballRef}
@@ -426,6 +516,7 @@ export function BeerPongScene({
           lastRef={lastRef}
           setMatch={setMatch}
           setLastThrow={setLastThrow}
+          setGlowCup={setGlowCup}
         />
       </HostCanvas>
       <TestPanel
@@ -442,11 +533,18 @@ export function BeerPongScene({
         onResetTune={() => setTune(DEFAULT_TUNE)}
         onResetCups={() => {
           ballRef.current = null;
+          setGlowCup(null);
           setMatch(refillCups(matchRef.current));
         }}
         lastThrow={lastThrow}
       />
-      <TurnHud match={match} controllers={controllers} testing={testing} />
+      <TurnHud
+        match={match}
+        controllers={controllers}
+        testing={testing}
+        shooterCalibrated={Boolean(shooter && calibByPlayer[shooter])}
+        lastThrow={lastThrow}
+      />
     </>
   );
 }

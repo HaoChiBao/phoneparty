@@ -23,6 +23,8 @@ export type GamePadProps = {
   selfId: string | null;
   motionReady: boolean;
   sample: GyroSample | null;
+  calib: CalibratedPose | null;
+  onCalibrate: () => void;
   // True while the shared recorder is capturing a clip. Pads must not fire a
   // scored action from the same motion.
   capturingMotion?: boolean;
@@ -41,6 +43,8 @@ export type GameDefinition = {
   PadExtra?: ComponentType<GamePadProps>;
   // Games that do not aim at the TV can drop the shared aim pad and its copy.
   hideAimPad?: boolean;
+  // Keep the shared Calibrate button when the aim pad is hidden.
+  showCalibrate?: boolean;
   // Gesture names for the shared motion recorder ("bear hit", "beer pong flick").
   motionLabels?: MotionLabel[];
 };

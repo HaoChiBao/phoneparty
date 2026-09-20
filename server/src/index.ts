@@ -214,7 +214,7 @@ io.on("connection", (socket) => {
   socket.on("calibrate", (pose) => {
     const roomCode = socket.data.roomCode;
     if (!roomCode || socket.data.role !== "controller") return;
-    socket.to(roomCode).emit("calibrated", {
+    io.to(roomCode).emit("calibrated", {
       playerId: socket.id,
       pose,
     });

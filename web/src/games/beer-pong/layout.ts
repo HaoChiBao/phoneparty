@@ -18,7 +18,8 @@ export const BALL = {
 
 export const GRAVITY = 9.6;
 export const RACK_SPACING = 0.098;
-export const FRONT_X = 0.82;
+export const FRONT_X = 0.58;
+export const START_CUPS = 6;
 
 export type TeamId = "a" | "b";
 
@@ -60,7 +61,7 @@ export function rackPositions(team: TeamId, count: number): { x: number; z: numb
   }));
 }
 
-export function placeRacks(count = 10): CupSlot[] {
+export function placeRacks(count = START_CUPS): CupSlot[] {
   const cups: CupSlot[] = [];
   for (const team of ["a", "b"] as const) {
     rackPositions(team, count).forEach((spot, index) => {
@@ -91,14 +92,14 @@ export function compactRack(cups: CupSlot[], team: TeamId): CupSlot[] {
   });
 }
 
-export const RERACK_AT = new Set([6, 3]);
+export const RERACK_AT = new Set([3]);
 
 export function maybeRerack(cups: CupSlot[], team: TeamId) {
   const left = liveCups(cups, team).length;
   return RERACK_AT.has(left) ? compactRack(cups, team) : cups;
 }
 
-export function launchPoint(team: TeamId, aimZ: number) {
+export function launchPoint(team: TeamId, aimZ = 0) {
   const half = TABLE.width / 2 - 0.08;
   return {
     x: team === "a" ? -TABLE.length / 2 - 0.08 : TABLE.length / 2 + 0.08,

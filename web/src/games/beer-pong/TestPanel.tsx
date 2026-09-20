@@ -1,7 +1,7 @@
 "use client";
 
 import type { CalibratedPose, GyroSample, Player } from "@/lib/protocol";
-import type { AimSnapshot } from "./aimMath";
+import type { ThrowReadout } from "./throwMath";
 import { TUNE_RANGE, type ThrowTune } from "./tune";
 
 export type LastThrowInfo = {
@@ -71,7 +71,7 @@ export function TestPanel({
   onFocus: (id: string) => void;
   sample?: GyroSample;
   calib?: CalibratedPose;
-  aim: AimSnapshot | null;
+  aim: ThrowReadout | null;
   tune: ThrowTune;
   onTune: (field: keyof ThrowTune, value: number) => void;
   onResetTune: () => void;
@@ -101,8 +101,8 @@ export function TestPanel({
       ) : (
         <div className="mt-2 flex flex-col gap-3">
           <p className="text-black/55">
-            Device α β γ, then relative to calibrate. Tilt aims at the table. xyz moves the launch
-            origin. Throw is a ballistic shot at the ring, using power and arc.
+            A straight flick aims at the middle of the other rack. Gyro twist and a light
+            phone move add a small nudge. Calibrate before throwing.
           </p>
           {controllers.length > 1 ? (
             <div className="flex flex-wrap gap-1">
@@ -143,13 +143,10 @@ export function TestPanel({
               {fmt(aim?.roll ?? 0, 1)}
             </p>
             <p>
-              dir {fmt(aim?.dirX ?? 0)} {fmt(aim?.dirY ?? 0)} {fmt(aim?.dirZ ?? 0)}
+              nudge {fmt(aim?.lateral ?? 0)} , {fmt(aim?.depth ?? 0)}
             </p>
             <p>
-              table {fmt(aim?.hitX ?? 0)} , {fmt(aim?.hitZ ?? 0)}
-            </p>
-            <p>
-              origin {fmt(aim?.originX ?? 0)} {fmt(aim?.originY ?? 0)} {fmt(aim?.originZ ?? 0)}
+              target {fmt(aim?.targetX ?? 0)} , {fmt(aim?.targetZ ?? 0)}
             </p>
           </div>
           <div className="flex flex-col gap-2">

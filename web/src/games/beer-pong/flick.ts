@@ -3,6 +3,9 @@ import { ACTION_TUNE_EVENT, loadActionTune } from "@/lib/actionTune";
 export type FlickPayload = {
   power: number;
   peak: number;
+  ax: number;
+  ay: number;
+  az: number;
 };
 
 const START = 11;
@@ -35,6 +38,9 @@ export function createFlickState() {
   return {
     armed: false,
     peak: 0,
+    ax: 0,
+    ay: 0,
+    az: 0,
     started: 0,
     lastFire: 0,
   };
@@ -75,6 +81,9 @@ export function stepFlick(
   if (now - state.lastFire < gates.cooldown) {
     state.armed = false;
     state.peak = 0;
+    state.ax = 0;
+    state.ay = 0;
+    state.az = 0;
     return null;
   }
   if (mag >= gates.start) {
@@ -82,21 +91,36 @@ export function stepFlick(
       state.armed = true;
       state.started = now;
       state.peak = mag;
+      state.ax = accel.x;
+      state.ay = accel.y;
+      state.az = accel.z;
     } else if (mag > state.peak) {
       state.peak = mag;
+      state.ax = accel.x;
+      state.ay = accel.y;
+      state.az = accel.z;
     }
     return null;
   }
   if (!state.armed || mag > gates.hold) return null;
   const elapsed = now - state.started;
   const peak = state.peak;
+  const ax = state.ax;
+  const ay = state.ay;
+  const az = state.az;
   state.armed = false;
   state.peak = 0;
+  state.ax = 0;
+  state.ay = 0;
+  state.az = 0;
   if (peak < gates.minPeak || elapsed < 40 || elapsed > 900) return null;
   state.lastFire = now;
   return {
     peak,
     power: Math.min(2.2, Math.max(0.4, (peak - 8) / 12)),
+    ax,
+    ay,
+    az,
   };
 }
 
@@ -113,5 +137,8 @@ export function swipeFlick(
   return {
     peak: dy,
     power: Math.min(2.2, Math.max(0.45, 0.35 + speed * 1.4)),
+    ax: 0,
+    ay: 0,
+    az: 0,
   };
 }
