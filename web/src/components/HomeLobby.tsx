@@ -12,7 +12,9 @@ export function HomeLobby() {
   const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const games = listGames();
+  const games = listGames().filter(
+    (game) => game.id !== "range" && game.id !== "sandbox",
+  );
 
   async function hostParty() {
     setBusy(true);

@@ -38,7 +38,7 @@ export const PLAYER_COLORS = [
   "#7AA6FF",
 ] as const;
 
-export const DEFAULT_GAME_ID = "range";
+export const DEFAULT_GAME_ID = "hammer";
 
 export type GameId = string;
 

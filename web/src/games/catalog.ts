@@ -13,8 +13,10 @@ const games: GameDefinition[] = [
   beerPongGame,
 ];
 
+const HIDDEN_FROM_PICKER = new Set(["range", "sandbox"]);
+
 export function listGames() {
-  return games;
+  return games.filter((game) => !HIDDEN_FROM_PICKER.has(game.id));
 }
 
 export function getGame(id: string | null | undefined): GameDefinition {

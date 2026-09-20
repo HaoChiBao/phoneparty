@@ -27,7 +27,9 @@ export function HostHud({
   onKick: (playerId: string) => void;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
-  const games = listGames();
+  const games = listGames().filter(
+    (game) => game.id !== "range" && game.id !== "sandbox",
+  );
   const currentGame = games.find((game) => game.id === gameId);
   const [open, setOpen] = useState(true);
 
