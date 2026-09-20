@@ -177,6 +177,18 @@ io.on("connection", (socket) => {
       return;
     }
 
+    if (payload.role === "controller") {
+      const alreadyIn =
+        socket.data.roomCode === room.code && socket.data.role === "controller";
+      const phones = [...room.players.values()].filter(
+        (player) => player.role === "controller" && player.id !== socket.id,
+      ).length;
+      if (!alreadyIn && phones >= 2) {
+        ack?.({ ok: false, error: "Room is full. Two phones max." });
+        return;
+      }
+    }
+
     if (socket.data.roomCode) {
       socket.leave(socket.data.roomCode);
       removePlayer(socket.data.roomCode, socket.id);

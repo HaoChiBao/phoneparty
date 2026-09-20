@@ -3,19 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GamePadProps } from "@/games/types";
 import { ACTION_TUNE_EVENT } from "@/lib/actionTune";
-import { powerToScore, useRoundState } from "./logic";
+import { useRoundState } from "./logic";
 import { SwingHint } from "./SwingHint";
-import {
-  isAimedDown,
-  type RestPose,
-  useSwingDetector,
-} from "./swing";
-import {
-  loadSensitivity,
-  saveSensitivity,
-  SENSITIVITY,
-  tuneFromSensitivity,
-} from "./tune";
+import { isAimedDown, useSwingDetector } from "./swing";
+import { loadSensitivity, tuneFromSensitivity } from "./tune";
 
 export function HammerPad({
   sendAction,
@@ -37,12 +28,7 @@ export function HammerPad({
   const myTurn = Boolean(selfId) && round.current?.id === selfId;
 
   const [armed, setArmed] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [sensitivity, setSensitivity] = useState(loadSensitivity);
-  const [rest, setRest] = useState<RestPose | null>(null);
-  const [practice, setPractice] = useState<{ power: number; peak: number } | null>(
-    null,
-  );
+  const [sensitivity] = useState(loadSensitivity);
 
   const [tuneRev, setTuneRev] = useState(0);
   const tune = useMemo(
@@ -55,42 +41,26 @@ export function HammerPad({
     window.addEventListener(ACTION_TUNE_EVENT, refresh);
     return () => window.removeEventListener(ACTION_TUNE_EVENT, refresh);
   }, []);
-  const aimedDown = isAimedDown(sample, rest, tune);
-  const waitingToSwing = myTurn && !mySwing && motionReady && !testing;
+  const aimedDown = isAimedDown(sample, null, tune);
+  const waitingToSwing = myTurn && !mySwing && motionReady;
   const screenReady = armed && waitingToSwing;
 
   const onSwing = useCallback(
-    (power: number, peak: number) => {
-      if (testing) {
-        setPractice({ power, peak });
-        return;
-      }
+    (power: number) => {
       setArmed(false);
       sendAction("swing", { power });
     },
-    [sendAction, testing],
+    [sendAction],
   );
 
-  const { phase, liveMag } = useSwingDetector({
-    active:
-      motionReady &&
-      !capturingMotion &&
-      (testing || (waitingToSwing && armed)),
-    armed: testing || armed,
+  const { phase } = useSwingDetector({
+    active: motionReady && !capturingMotion && waitingToSwing && armed,
+    armed,
     aimedDown,
     tune,
-    reportLive: testing,
+    reportLive: false,
     onSwing,
   });
-
-  function setSensitivityAndSave(value: number) {
-    setSensitivity(saveSensitivity(value));
-  }
-
-  function calibrateRest() {
-    if (!sample) return;
-    setRest({ beta: sample.beta, gamma: sample.gamma });
-  }
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
@@ -122,7 +92,7 @@ export function HammerPad({
           Tap <span className="font-medium text-black">Enable motion</span> below
           to take your swing.
         </p>
-      ) : round.done && !testing ? (
+      ) : round.done ? (
         <>
           <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
             Round over
@@ -147,7 +117,7 @@ export function HammerPad({
             New round
           </button>
         </>
-      ) : mySwing && !testing ? (
+      ) : mySwing ? (
         <>
           <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
             Your apples
@@ -159,7 +129,7 @@ export function HammerPad({
               : "Waiting for the others…"}
           </p>
         </>
-      ) : myTurn && !testing ? (
+      ) : myTurn ? (
         <>
           <p
             className="text-[11px] uppercase tracking-[0.22em]"
@@ -182,7 +152,7 @@ export function HammerPad({
             Ready
           </button>
         </>
-      ) : !testing ? (
+      ) : (
         <>
           <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">
             Waiting
@@ -194,83 +164,7 @@ export function HammerPad({
             Everyone takes one swing. Most apples wins.
           </p>
         </>
-      ) : null}
-
-      {testing ? (
-        <div className="flex w-full max-w-xs flex-col gap-3 border border-black/15 p-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-            Test
-          </p>
-          <p className="text-sm text-black/60">
-            Practice swings do not count. Calibrate the rest pose, then tune
-            how hard a hit has to be.
-          </p>
-          <button
-            type="button"
-            onClick={calibrateRest}
-            disabled={!sample}
-            className="h-11 border border-black text-[15px] font-medium disabled:opacity-40"
-          >
-            Calibrate rest pose
-          </button>
-          <p className="text-center text-xs text-black/45">
-            {rest
-              ? `Rest β ${rest.beta.toFixed(0)}°  γ ${rest.gamma.toFixed(0)}°`
-              : "Hold the phone how you will swing, then calibrate."}
-          </p>
-          <label className="block">
-            <span className="flex justify-between text-[11px] text-black/55">
-              <span>Sensitivity</span>
-              <span>{sensitivity.toFixed(2)}×</span>
-            </span>
-            <input
-              type="range"
-              min={SENSITIVITY.min}
-              max={SENSITIVITY.max}
-              step={SENSITIVITY.step}
-              value={sensitivity}
-              onChange={(event) =>
-                setSensitivityAndSave(Number(event.target.value))
-              }
-              className="mt-1 w-full accent-[#0057FF]"
-            />
-          </label>
-          <p className="text-center font-mono text-[11px] text-black/55">
-            live {liveMag.toFixed(1)} m/s²
-            {sample
-              ? `  ·  β ${sample.beta.toFixed(0)} γ ${sample.gamma.toFixed(0)}`
-              : ""}
-          </p>
-          {practice ? (
-            <p className="text-center text-sm font-medium">
-              Practice {powerToScore(practice.power)}
-              <span className="ml-2 text-black/45">
-                peak {practice.peak.toFixed(1)}
-              </span>
-            </p>
-          ) : (
-            <p className="text-center text-xs text-black/45">
-              Swing now to read a score. Higher sensitivity = lighter hits
-              count more.
-            </p>
-          )}
-        </div>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={() => {
-          setArmed(false);
-          setTesting((on) => !on);
-        }}
-        className={
-          testing
-            ? "h-11 w-full max-w-xs bg-black text-[15px] font-medium text-white"
-            : "h-11 w-full max-w-xs border border-black text-[15px] font-medium"
-        }
-      >
-        {testing ? "Test mode on" : "Test mode"}
-      </button>
+      )}
 
       <div className="flex flex-wrap justify-center gap-2">
         {round.order.map((player) => {

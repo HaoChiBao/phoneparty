@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HowToPlay } from "@/components/HowToPlay";
 import { HostHud } from "@/components/HostHud";
 import { getGame } from "@/games/catalog";
 import { usePartySocket } from "@/lib/usePartySocket";
@@ -37,6 +38,9 @@ export function HostSession({ code }: { code: string }) {
         actionsByPlayer={actionsByPlayer}
         sendAction={sendGameAction}
       />
+      {game.howToPlay ? (
+        <HowToPlay key={game.id} title={game.title} body={game.howToPlay} />
+      ) : null}
       <HostHud
         code={code}
         joinUrl={joinUrl}

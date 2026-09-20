@@ -49,6 +49,8 @@ export type GameDefinition = {
   showCalibrate?: boolean;
   // Gesture names for the shared motion recorder ("bear hit", "beer pong flick").
   motionLabels?: MotionLabel[];
+  // TV how-to copy. Shown when the game opens; dismissed until it is opened again.
+  howToPlay?: string;
 };
 
 export function motionLabelsFor(game: GameDefinition): MotionLabel[] {

@@ -17,7 +17,6 @@ export function BeerPongPad({
   selfId,
   actionsByPlayer,
 }: GamePadProps) {
-  const [wantTest, setWantTest] = useState(false);
   const [pendingThrow, setPendingThrow] = useState(false);
   const [status, setStatus] = useState("Enable motion, then calibrate at the TV.");
   const flick = useRef(createFlickState());
@@ -32,7 +31,7 @@ export function BeerPongPad({
     [players, actionsByPlayer],
   );
   const ready = Boolean(calib);
-  const testing = wantTest || view.testing;
+  const testing = view.testing;
   const myTurn = Boolean(selfId) && view.shooterId === selfId;
   const canThrow =
     ready &&
@@ -114,13 +113,6 @@ export function BeerPongPad({
     if (!start || !canThrow) return;
     const result = swipeFlick(start.y, event.clientY, start.t, Date.now());
     if (result) fire(result.power, result.peak, result.ax, result.ay, result.az);
-  }
-
-  function toggleTest() {
-    const next = !testing;
-    setWantTest(next);
-    setPendingThrow(false);
-    sendAction("test", { on: next });
   }
 
   return (
@@ -232,52 +224,10 @@ export function BeerPongPad({
         </button>
       ) : null}
 
-      {testing ? (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="Flick to throw"
-          className="flex h-36 touch-none flex-col items-center justify-center px-4 text-white"
-          style={{ background: ready ? LIVE_GREEN : "#0057FF" }}
-          onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
-          onPointerCancel={() => {
-            swipe.current = null;
-          }}
-        >
-          <p className="text-lg font-medium">{ready ? "Flick" : "Calibrate first"}</p>
-          <p className="mt-1 text-center text-xs leading-4 text-white/80">
-            {ready
-              ? "Test throws do not wait for turn order."
-              : "Calibrate before a test flick."}
-          </p>
-        </div>
-      ) : null}
-
       <p className="text-center text-xs leading-4 text-black/45">
         {view.aLeft} – {view.bLeft}
         {view.redemption ? " · Redemption" : view.overtime ? " · Overtime" : ""}
       </p>
-      <button
-        type="button"
-        onClick={toggleTest}
-        className={
-          testing
-            ? "h-11 bg-black text-[15px] font-medium text-white"
-            : "h-11 border border-black text-[15px] font-medium"
-        }
-      >
-        {testing ? "Test mode on" : "Test mode"}
-      </button>
-      {testing ? (
-        <button
-          type="button"
-          onClick={() => sendAction("resetCups")}
-          className="h-11 border border-black/20 text-[15px] font-medium"
-        >
-          Reset cups
-        </button>
-      ) : null}
     </div>
   );
 }

@@ -16,12 +16,36 @@ const FLIGHT_MS = 420;
 const RINGS = 10;
 
 const ACCENT = "#0057FF";
+const BOARD = TARGET_RADIUS * 2.2;
+const LINE = 0.018;
 
-function ringColor(ring: number) {
-  if (ring >= 9) return ACCENT;
-  if (ring >= 7) return "#7AA6FF";
-  if (ring >= 4) return "#ffffff";
-  return "#eef1f6";
+function woodGrainTexture() {
+  if (typeof document === "undefined") return null;
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#c49a62";
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 42; i++) {
+    const x = (i / 42) * size;
+    ctx.strokeStyle = i % 4 === 0 ? "rgba(92, 48, 18, 0.22)" : "rgba(168, 110, 52, 0.28)";
+    ctx.lineWidth = i % 7 === 0 ? 7 : 2.4;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.sin(i) * 10, 0);
+    for (let y = 0; y <= size; y += 12) {
+      ctx.lineTo(x + Math.sin(y * 0.035 + i * 0.7) * 14, y);
+    }
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 /** Face position for an aim, where 1 is the outer edge of the target. */
@@ -113,13 +137,13 @@ export function Target({
     return map;
   }, [order]);
 
+  const woodMap = useMemo(() => woodGrainTexture(), []);
   const rings = useMemo(
     () =>
       Array.from({ length: RINGS }, (_, index) => {
         const ring = RINGS - index; // 10 in the middle, 1 at the edge
         const outer = ((RINGS - ring + 1) / RINGS) * TARGET_RADIUS;
-        const inner = ((RINGS - ring) / RINGS) * TARGET_RADIUS;
-        return { ring, inner, outer };
+        return { ring, outer };
       }),
     [],
   );
@@ -176,33 +200,29 @@ export function Target({
     <group>
       <WindSock wind={wind} />
 
-      {/* stand */}
-      <mesh position={[0, (TARGET_Y - TARGET_RADIUS) / 2, TARGET_Z - 0.1]}>
-        <boxGeometry args={[0.16, TARGET_Y - TARGET_RADIUS, 0.16]} />
-        <meshStandardMaterial color="#111111" />
+      <mesh position={[0, TARGET_Y, TARGET_Z - 0.045]}>
+        <boxGeometry args={[BOARD, BOARD, 0.09]} />
+        <meshStandardMaterial color="#6e401c" roughness={0.94} metalness={0} />
       </mesh>
-
-      {/* face */}
-      <mesh position={[0, TARGET_Y, TARGET_Z - 0.04]}>
-        <circleGeometry args={[TARGET_RADIUS + 0.09, 48]} />
-        <meshStandardMaterial color="#111111" />
+      <mesh position={[0, TARGET_Y, TARGET_Z + 0.002]}>
+        <planeGeometry args={[BOARD * 0.985, BOARD * 0.985]} />
+        <meshStandardMaterial
+          map={woodMap ?? undefined}
+          color={woodMap ? "#ffffff" : "#c49a62"}
+          roughness={0.9}
+          metalness={0}
+        />
       </mesh>
-      {rings.map(({ ring, inner, outer }) => (
-        <mesh
-          key={ring}
-          position={[0, TARGET_Y, TARGET_Z + ring * 0.002]}
-        >
-          <ringGeometry args={[inner, outer, 48]} />
-          <meshStandardMaterial color={ringColor(ring)} />
-        </mesh>
-      ))}
-      {/* ring separators, so the scoring bands read at a distance */}
       {rings.map(({ ring, outer }) => (
-        <mesh key={`edge-${ring}`} position={[0, TARGET_Y, TARGET_Z + 0.03]}>
-          <ringGeometry args={[outer - 0.007, outer, 48]} />
-          <meshBasicMaterial color="#111111" transparent opacity={0.28} />
+        <mesh key={ring} position={[0, TARGET_Y, TARGET_Z + 0.012]}>
+          <ringGeometry args={[Math.max(outer - LINE, 0.001), outer, 64]} />
+          <meshBasicMaterial color="#111111" />
         </mesh>
       ))}
+      <mesh position={[0, TARGET_Y, TARGET_Z + 0.014]}>
+        <circleGeometry args={[TARGET_RADIUS / RINGS, 32]} />
+        <meshBasicMaterial color="#111111" />
+      </mesh>
 
       {/* arrows already in the face */}
       {order.map((player) =>
