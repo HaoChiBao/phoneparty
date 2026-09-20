@@ -5,11 +5,11 @@ import { FishingScene } from "./Scene";
 export const fishingGame: GameDefinition = {
   id: "fishing",
   title: "Salmon",
-  blurb: "You're a bear at the river. Swipe salmon for 30 seconds. Most fish wins.",
+  blurb: "Hook salmon and mash to reel them in. Bigger fish fight harder. Most points wins.",
   Scene: FishingScene,
   PadExtra: FishingPad,
   hideAimPad: true,
-  motionLabels: [{ id: "swipe", title: "bear swipe" }],
+  motionLabels: [{ id: "hook", title: "hook a fish" }],
   howToPlay:
-    "Scan the QR and enable motion. Point the camera at the TV to move your paw. Line up a salmon and jab the phone straight down to swipe. Thirty seconds, most fish wins.",
+    "Scan the QR and enable motion. Point the camera at the TV to move your hook. Hover over a fish and tap Hook to latch, then mash the screen to reel it in. Bigger fish take more taps. Everyone fishes at once for 30 seconds — most points wins.",
 };

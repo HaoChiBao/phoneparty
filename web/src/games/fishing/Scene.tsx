@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { useServerClock } from "./clock";
-import { fishPosition, LEAD_IN_MS } from "./school";
+import { LEAD_IN_MS } from "./school";
 import { River } from "./River";
 import { secondsLeft, useRoundState } from "./logic";
 
@@ -16,23 +16,11 @@ export function FishingScene({
   const { now, offset } = useServerClock(actionsByPlayer);
   const round = useRoundState(controllers, actionsByPlayer, now);
 
-  const swipeAtByPlayer = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const action of Object.values(actionsByPlayer)) {
-      if (action.type === "swipe") map[action.playerId] = action.timestamp;
-    }
-    return map;
-  }, [actionsByPlayer]);
-
-  // Splash where the newest salmon was taken.
   const splash = useMemo(() => {
     const last = round.lastCatch;
     if (!last) return null;
-    const fish = round.school.find((entry) => entry.id === last.fishId);
-    const at = fish ? fishPosition(fish, last.atMs) : null;
-    if (!at) return null;
-    return { x: at.x, y: at.y, time: round.startedAt + LEAD_IN_MS + last.atMs };
-  }, [round.lastCatch, round.school, round.startedAt]);
+    return { x: last.x, y: last.y, time: round.startedAt + LEAD_IN_MS + last.atMs };
+  }, [round.lastCatch, round.startedAt]);
 
   const seconds = secondsLeft(round.startedAt, now);
   const countdown = round.phase === "countdown"
@@ -45,17 +33,16 @@ export function FishingScene({
         <River
           controllers={controllers}
           school={round.school}
-          caughtIds={round.caughtIds}
+          busyIds={round.busyIds}
+          fights={round.phase === "fishing" || round.phase === "countdown" ? round.fights : {}}
           zeroByPlayer={round.zeroByPlayer}
           gyroByPlayer={gyroByPlayer}
-          swipeAtByPlayer={swipeAtByPlayer}
           splash={splash}
           startedAt={round.startedAt}
           offset={offset}
         />
       </HostCanvas>
 
-      {/* counter across the top */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-24">
         <div className="flex items-end gap-6">
           <div className="rounded-2xl bg-white/92 px-5 py-3 text-center">

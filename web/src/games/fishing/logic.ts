@@ -4,10 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalibratedPose, GameActionState, Player } from "@/lib/protocol";
 import {
   buildSchool,
-  fishUnderPaw,
+  fishUnderHook,
   LEAD_IN_MS,
+  pointsFor,
+  reelsFor,
   ROUND_MS,
   type Fish,
+  type FishKind,
 } from "./school";
 
 export type Phase = "idle" | "countdown" | "fishing" | "over";
@@ -15,8 +18,20 @@ export type Phase = "idle" | "countdown" | "fishing" | "over";
 export type Catch = {
   fishId: number;
   playerId: string;
+  kind: FishKind;
   /** Milliseconds into the round, on the server's clock. */
   atMs: number;
+  x: number;
+  y: number;
+};
+
+export type Fight = {
+  playerId: string;
+  fishId: number;
+  reels: number;
+  hookedAt: number;
+  x: number;
+  y: number;
 };
 
 export type RoundState = {
@@ -27,11 +42,13 @@ export type RoundState = {
   school: Fish[];
   caught: Catch[];
   caughtIds: ReadonlySet<number>;
+  busyIds: ReadonlySet<number>;
+  fights: Record<string, Fight>;
   countByPlayer: Record<string, number>;
+  catchesByPlayer: Record<string, number>;
   zeroByPlayer: Record<string, CalibratedPose>;
-  ranking: { player: Player; count: number }[];
+  ranking: { player: Player; count: number; catches: number }[];
   winners: Player[];
-  /** The most recent catch, for a splash on the TV. */
   lastCatch: Catch | null;
 };
 
@@ -62,6 +79,7 @@ type Progress = {
   roundId: number;
   startedAt: number;
   caught: Catch[];
+  fights: Record<string, Fight>;
   zeroByPlayer: Record<string, CalibratedPose>;
 };
 
@@ -69,6 +87,7 @@ export const EMPTY_PROGRESS: Progress = {
   roundId: 0,
   startedAt: 0,
   caught: [],
+  fights: {},
   zeroByPlayer: {},
 };
 
@@ -81,25 +100,50 @@ export function phaseAt(startedAt: number, now: number): Phase {
   return "over";
 }
 
+function busyIds(progress: Progress) {
+  const ids = new Set(progress.caught.map((entry) => entry.fishId));
+  for (const fight of Object.values(progress.fights)) ids.add(fight.fishId);
+  return ids;
+}
+
+function roundElapsed(startedAt: number, timestamp: number) {
+  if (!startedAt) return null;
+  const elapsed = timestamp - startedAt - LEAD_IN_MS;
+  if (elapsed < 0 || elapsed > ROUND_MS) return null;
+  return elapsed;
+}
+
+function readReels(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const n = (data as { n?: unknown }).n;
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return Math.max(0, Math.floor(n));
+}
+
 /**
- * Catches are resolved against SERVER timestamps, which every client sees the
- * same value for, rather than any local clock — so the TV and all the phones
- * agree on which salmon a paw took, and on who got there first.
+ * Hooks and reels are resolved against SERVER timestamps, which every client
+ * sees the same value for, rather than any local clock — so the TV and all the
+ * phones agree on who latched a fish first and when it came up.
+ *
+ * Reel sends a running click count, like Shake's stroke total, so the server
+ * dropping a burst still lands the clicks the phone actually made.
  */
 export function applyActions(
   previous: Progress,
   actions: GameActionState[],
-  school: Fish[],
 ): Progress {
   let next = previous;
+  let school = buildSchool(next.roundId);
   for (const action of actions) {
     if (action.type === "restart") {
       next = {
         roundId: next.roundId + 1,
         startedAt: 0,
         caught: [],
+        fights: {},
         zeroByPlayer: {},
       };
+      school = buildSchool(next.roundId);
       continue;
     }
 
@@ -108,31 +152,73 @@ export function applyActions(
       if (!pose) continue;
       next = {
         ...next,
-        // The first bear to put a paw up starts the clock for everyone.
         startedAt: next.startedAt || action.timestamp,
         zeroByPlayer: { ...next.zeroByPlayer, [action.playerId]: pose },
       };
       continue;
     }
 
-    if (action.type !== "swipe") continue;
-    if (!next.startedAt) continue;
-    const paw = readPaw(action.data);
-    if (!paw) continue;
-    const elapsed = action.timestamp - next.startedAt - LEAD_IN_MS;
-    // Nothing counts before the whistle or after time is up.
-    if (elapsed < 0 || elapsed > ROUND_MS) continue;
-    const taken = new Set(next.caught.map((entry) => entry.fishId));
-    const fish = fishUnderPaw(school, elapsed, paw.x, paw.y, taken);
-    // A miss costs nothing; the bear just swipes water.
+    if (action.type === "hook") {
+      if (next.fights[action.playerId]) continue;
+      const paw = readPaw(action.data);
+      if (!paw) continue;
+      const elapsed = roundElapsed(next.startedAt, action.timestamp);
+      if (elapsed === null) continue;
+      const fish = fishUnderHook(school, elapsed, paw.x, paw.y, busyIds(next));
+      if (!fish) continue;
+      next = {
+        ...next,
+        fights: {
+          ...next.fights,
+          [action.playerId]: {
+            playerId: action.playerId,
+            fishId: fish.id,
+            reels: 0,
+            hookedAt: elapsed,
+            x: paw.x,
+            y: paw.y,
+          },
+        },
+      };
+      continue;
+    }
+
+    if (action.type !== "reel") continue;
+    const fight = next.fights[action.playerId];
+    if (!fight) continue;
+    const elapsed = roundElapsed(next.startedAt, action.timestamp);
+    if (elapsed === null) continue;
+    const fish = school.find((entry) => entry.id === fight.fishId);
     if (!fish) continue;
-    next = {
-      ...next,
-      caught: [
-        ...next.caught,
-        { fishId: fish.id, playerId: action.playerId, atMs: elapsed },
-      ],
-    };
+    const counted = readReels(action.data);
+    const reels = counted === null ? fight.reels + 1 : Math.max(fight.reels, counted);
+    if (reels >= reelsFor(fish)) {
+      const fights = { ...next.fights };
+      delete fights[action.playerId];
+      next = {
+        ...next,
+        fights,
+        caught: [
+          ...next.caught,
+          {
+            fishId: fish.id,
+            playerId: action.playerId,
+            kind: fish.kind,
+            atMs: elapsed,
+            x: fight.x,
+            y: fight.y,
+          },
+        ],
+      };
+    } else {
+      next = {
+        ...next,
+        fights: {
+          ...next.fights,
+          [action.playerId]: { ...fight, reels },
+        },
+      };
+    }
   }
   return next;
 }
@@ -140,7 +226,6 @@ export function applyActions(
 /**
  * Reduces the live action stream into a round. Like the other games, state is
  * derived on every client rather than broadcast, so the server stays generic.
- * `phase` needs a clock, so it is passed in rather than read here.
  */
 export function useRoundState(
   controllers: Player[],
@@ -150,48 +235,59 @@ export function useRoundState(
   const seen = useRef<Record<string, number>>({});
   const [progress, setProgress] = useState<Progress>(EMPTY_PROGRESS);
   const school = useMemo(() => buildSchool(progress.roundId), [progress.roundId]);
-  const schoolRef = useRef(school);
-
-  useEffect(() => {
-    schoolRef.current = school;
-  }, [school]);
 
   useEffect(() => {
     const fresh = Object.values(actionsByPlayer)
       .filter((action) => action.timestamp > (seen.current[action.playerId] ?? 0))
-      .sort((a, b) => a.timestamp - b.timestamp);
+      .sort(
+        (a, b) =>
+          a.timestamp - b.timestamp || a.playerId.localeCompare(b.playerId),
+      );
     if (fresh.length === 0) return;
     for (const action of fresh) {
       seen.current[action.playerId] = action.timestamp;
     }
-    setProgress((current) => applyActions(current, fresh, schoolRef.current));
+    setProgress((current) => applyActions(current, fresh));
   }, [actionsByPlayer]);
 
   return useMemo(() => {
     const countByPlayer: Record<string, number> = {};
+    const catchesByPlayer: Record<string, number> = {};
     for (const entry of progress.caught) {
-      countByPlayer[entry.playerId] = (countByPlayer[entry.playerId] ?? 0) + 1;
+      const fish = school.find((item) => item.id === entry.fishId);
+      const points = fish ? pointsFor(fish) : 1;
+      countByPlayer[entry.playerId] = (countByPlayer[entry.playerId] ?? 0) + points;
+      catchesByPlayer[entry.playerId] = (catchesByPlayer[entry.playerId] ?? 0) + 1;
     }
     const ranking = [...controllers]
-      .map((player) => ({ player, count: countByPlayer[player.id] ?? 0 }))
+      .map((player) => ({
+        player,
+        count: countByPlayer[player.id] ?? 0,
+        catches: catchesByPlayer[player.id] ?? 0,
+      }))
       .sort(
         (a, b) =>
           b.count - a.count ||
+          b.catches - a.catches ||
           a.player.connectedAt - b.player.connectedAt ||
           a.player.id.localeCompare(b.player.id),
       );
     const top = ranking[0]?.count ?? 0;
+    const caughtIds = new Set(progress.caught.map((entry) => entry.fishId));
+    const busy = busyIds(progress);
     return {
       roundId: progress.roundId,
       phase: phaseAt(progress.startedAt, now),
       startedAt: progress.startedAt,
       school,
       caught: progress.caught,
-      caughtIds: new Set(progress.caught.map((entry) => entry.fishId)),
+      caughtIds,
+      busyIds: busy,
+      fights: progress.fights,
       countByPlayer,
+      catchesByPlayer,
       zeroByPlayer: progress.zeroByPlayer,
       ranking,
-      // A tie leaves more than one bear on top.
       winners: top > 0 ? ranking.filter((e) => e.count === top).map((e) => e.player) : [],
       lastCatch: progress.caught[progress.caught.length - 1] ?? null,
     };

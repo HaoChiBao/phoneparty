@@ -3,36 +3,85 @@
 /**
  * The river, as a pure function of the round number. Every client builds the
  * identical school from the same seed, so the TV and every phone agree on where
- * each salmon is without streaming fish positions over the wire — the same
- * trick turn order and the archery wind use.
+ * each fish is without streaming positions over the wire.
  */
 
 /** Play field in world units, 16 by 9. Cursors use the same units. */
 export const FIELD = { width: 16, height: 9 } as const;
 export const ROUND_MS = 30_000;
-/** Grace after the start action so the room can get their paws up. */
+/** Grace after the start action so the room can get their hooks up. */
 export const LEAD_IN_MS = 3_000;
 
+export type FishKind = "small" | "medium" | "large";
+
+export const KINDS: Record<
+  FishKind,
+  {
+    weight: number;
+    size: number;
+    sizeJitter: number;
+    crossMsMin: number;
+    crossMsMax: number;
+    reels: number;
+    points: number;
+    catchRadius: number;
+    tint: string;
+    src: string;
+  }
+> = {
+  small: {
+    weight: 0.55,
+    size: 0.58,
+    sizeJitter: 0.16,
+    crossMsMin: 1500,
+    crossMsMax: 3400,
+    reels: 6,
+    points: 1,
+    catchRadius: 0.68,
+    tint: "#ffffff",
+    src: "/fishing/fish-small.png",
+  },
+  medium: {
+    weight: 0.32,
+    size: 0.96,
+    sizeJitter: 0.14,
+    crossMsMin: 3600,
+    crossMsMax: 8200,
+    reels: 14,
+    points: 2,
+    catchRadius: 0.95,
+    tint: "#ffffff",
+    src: "/fishing/fish-medium.png",
+  },
+  large: {
+    weight: 0.13,
+    size: 1.52,
+    sizeJitter: 0.18,
+    crossMsMin: 7000,
+    crossMsMax: 15000,
+    reels: 28,
+    points: 3,
+    catchRadius: 1.28,
+    tint: "#ffffff",
+    src: "/fishing/fish-large.png",
+  },
+};
+
 export const SCHOOL = {
-  // Average gap between salmon entering at the right bank.
-  spawnEveryMs: 430,
-  spawnJitterMs: 260,
-  // Seconds to cross the river, right to left.
-  crossMsMin: 4200,
-  crossMsMax: 7200,
-  laneSpread: 3.1,
-  bobMin: 0.25,
-  bobMax: 0.95,
-  sizeMin: 0.78,
-  sizeMax: 1.25,
-  /** How close the paw has to land. Scaled by the salmon's size. */
-  catchRadius: 0.95,
+  spawnEveryMs: 480,
+  spawnJitterMs: 280,
+  laneSpread: 3.2,
+  bobMin: 0.18,
+  bobMax: 0.9,
 } as const;
 
 export type Fish = {
   id: number;
+  kind: FishKind;
   spawnMs: number;
   crossMs: number;
+  /** +1 swims right, -1 swims left. */
+  heading: 1 | -1;
   lane: number;
   bob: number;
   bobHz: number;
@@ -63,22 +112,34 @@ function mulberry32(seed: number) {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/** Every salmon that will appear in a round, in spawn order. */
+function pickKind(random: () => number): FishKind {
+  const roll = random();
+  if (roll < KINDS.small.weight) return "small";
+  if (roll < KINDS.small.weight + KINDS.medium.weight) return "medium";
+  return "large";
+}
+
+/** Every fish that will appear in a round, in spawn order. */
 export function buildSchool(roundId: number, durationMs = ROUND_MS): Fish[] {
   const random = mulberry32(hash32(`river:${roundId}`));
   const school: Fish[] = [];
-  let spawnMs = -SCHOOL.crossMsMin / 2; // a few already mid-river at the whistle
+  let spawnMs = -2200;
   let id = 0;
   while (spawnMs < durationMs) {
+    const kind = pickKind(random);
+    const spec = KINDS[kind];
+    const size = spec.size * lerp(1 - spec.sizeJitter, 1 + spec.sizeJitter, random());
     school.push({
       id,
+      kind,
       spawnMs,
-      crossMs: lerp(SCHOOL.crossMsMin, SCHOOL.crossMsMax, random()),
+      crossMs: lerp(spec.crossMsMin, spec.crossMsMax, random()),
+      heading: random() < 0.5 ? -1 : 1,
       lane: (random() * 2 - 1) * SCHOOL.laneSpread,
       bob: lerp(SCHOOL.bobMin, SCHOOL.bobMax, random()),
-      bobHz: lerp(0.25, 0.7, random()),
+      bobHz: lerp(0.2, 0.95, random()),
       phase: random() * Math.PI * 2,
-      size: lerp(SCHOOL.sizeMin, SCHOOL.sizeMax, random()),
+      size,
     });
     id += 1;
     spawnMs += SCHOOL.spawnEveryMs + (random() * 2 - 1) * SCHOOL.spawnJitterMs;
@@ -86,20 +147,21 @@ export function buildSchool(roundId: number, durationMs = ROUND_MS): Fish[] {
   return school;
 }
 
-const ENTRY_X = FIELD.width / 2 + 1.4;
-const EXIT_X = -FIELD.width / 2 - 1.4;
+const RIGHT_X = FIELD.width / 2 + 1.6;
+const LEFT_X = -FIELD.width / 2 - 1.6;
 
-/** Where a salmon is at a moment, or null when it is not in the river yet. */
+/** Where a fish is at a moment, or null when it is not in the river yet. */
 export function fishPosition(fish: Fish, elapsedMs: number): FishAt | null {
   const t = (elapsedMs - fish.spawnMs) / fish.crossMs;
   if (t < 0 || t > 1) return null;
-  const x = lerp(ENTRY_X, EXIT_X, t);
+  const startX = fish.heading > 0 ? LEFT_X : RIGHT_X;
+  const endX = fish.heading > 0 ? RIGHT_X : LEFT_X;
+  const x = lerp(startX, endX, t);
   const swim = (elapsedMs / 1000) * fish.bobHz * Math.PI * 2 + fish.phase;
   const y = fish.lane + Math.sin(swim) * fish.bob;
   return { fish, x, y };
 }
 
-/** Everything swimming right now, nearest the surface first. */
 export function fishInRiver(school: Fish[], elapsedMs: number): FishAt[] {
   const live: FishAt[] = [];
   for (const fish of school) {
@@ -109,23 +171,31 @@ export function fishInRiver(school: Fish[], elapsedMs: number): FishAt[] {
   return live;
 }
 
+export function reelsFor(fish: Fish) {
+  return KINDS[fish.kind].reels;
+}
+
+export function pointsFor(fish: Fish) {
+  return KINDS[fish.kind].points;
+}
+
 /**
- * The salmon a paw landing at (x, y) would take: the closest one within reach,
- * skipping any already caught. Ties break on id so every client agrees.
+ * The fish a hook at (x, y) would take: the closest one within reach, skipping
+ * any already caught or latched. Ties break on id so every client agrees.
  */
-export function fishUnderPaw(
+export function fishUnderHook(
   school: Fish[],
   elapsedMs: number,
   x: number,
   y: number,
-  caught: ReadonlySet<number>,
+  busy: ReadonlySet<number>,
 ): Fish | null {
   let best: { fish: Fish; distance: number } | null = null;
   for (const fish of school) {
-    if (caught.has(fish.id)) continue;
+    if (busy.has(fish.id)) continue;
     const at = fishPosition(fish, elapsedMs);
     if (!at) continue;
-    const reach = SCHOOL.catchRadius * fish.size;
+    const reach = KINDS[fish.kind].catchRadius * (fish.size / KINDS[fish.kind].size);
     const distance = Math.hypot(at.x - x, at.y - y);
     if (distance > reach) continue;
     if (
