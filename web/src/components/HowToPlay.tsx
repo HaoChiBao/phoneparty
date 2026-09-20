@@ -14,7 +14,7 @@ export function HowToPlay({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center px-5">
-      <div className="pointer-events-auto relative w-full max-w-md bg-white/95 px-6 py-5 text-center">
+      <div className="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white/95 px-6 py-5 text-center">
         <button
           type="button"
           onClick={() => setOpen(false)}

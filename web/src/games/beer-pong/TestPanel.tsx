@@ -79,7 +79,7 @@ export function TestPanel({
   lastThrow: LastThrowInfo | null;
 }) {
   return (
-    <div className="pointer-events-auto absolute bottom-24 left-5 z-20 w-[260px] max-h-[min(70dvh,36rem)] overflow-y-auto bg-white/95 px-3 py-3 text-[12px] leading-4">
+    <div className="pointer-events-auto absolute bottom-24 left-5 z-20 w-[260px] max-h-[min(70dvh,36rem)] overflow-y-auto rounded-2xl bg-white/95 px-3 py-3 text-[12px] leading-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] uppercase tracking-[0.18em] text-accent">Test</p>
         <button

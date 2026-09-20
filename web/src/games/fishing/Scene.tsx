@@ -57,42 +57,42 @@ export function FishingScene({
 
       {/* counter across the top */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] flex justify-center px-5 pt-24">
-        <div className="flex items-center gap-4 bg-white/92 px-5 py-3">
-          <div className="text-center">
+        <div className="flex items-end gap-6">
+          <div className="rounded-2xl bg-white/92 px-5 py-3 text-center">
             <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
               {round.phase === "over" ? "Time" : "Left"}
             </p>
-            <p className="text-3xl font-bold tabular-nums tracking-tight">
+            <p className="text-5xl font-bold tabular-nums tracking-tight">
               {round.phase === "idle" ? "30" : Math.round(seconds)}
             </p>
           </div>
-          <div className="h-10 w-px bg-black/10" />
-          <div className="flex flex-wrap items-center gap-2">
-            {round.ranking.length === 0 ? (
-              <span className="text-sm text-black/45">No bears yet</span>
-            ) : (
-              round.ranking.map(({ player, count }) => (
-                <span
+          {round.ranking.length > 0 ? (
+            <div className="flex flex-wrap items-end gap-x-8 gap-y-1 pb-1">
+              {round.ranking.map(({ player, count }) => (
+                <p
                   key={player.id}
-                  className="px-3 py-1 text-sm font-medium text-white"
-                  style={{ background: player.color }}
+                  className="text-4xl font-bold tracking-tight tabular-nums"
+                  style={{ color: player.color }}
                 >
-                  {player.name} · {count}
-                </span>
-              ))
-            )}
-          </div>
+                  {count}
+                  <span className="ml-2 text-lg font-medium opacity-70">
+                    {player.name}
+                  </span>
+                </p>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-center px-5 pb-10">
-        <div className="flex max-w-2xl flex-col items-center gap-3 bg-white/92 px-6 py-4 text-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-end px-5 pb-16">
+        <div className="max-w-lg rounded-2xl bg-white/92 px-6 py-4 text-right">
           {round.phase === "idle" ? (
             <>
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
                 Salmon run
               </p>
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="mt-1 text-2xl font-bold tracking-tight">
                 {controllers.length === 0
                   ? "Waiting for a phone…"
                   : "Ready"}
@@ -103,7 +103,7 @@ export function FishingScene({
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
                 Ready
               </p>
-              <p className="text-6xl font-bold tabular-nums tracking-tight">
+              <p className="mt-1 text-6xl font-bold tabular-nums tracking-tight">
                 {countdown}
               </p>
             </>
@@ -116,17 +116,12 @@ export function FishingScene({
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
                 Run over
               </p>
-              <p className="text-3xl font-bold tracking-tight">
+              <p className="mt-1 text-3xl font-bold tracking-tight">
                 {round.winners.length === 0
                   ? "Nobody caught a thing"
                   : round.winners.length > 1
                     ? `${round.winners.map((p) => p.name).join(" & ")} tie`
                     : `${round.winners[0].name} wins`}
-                {round.winners.length > 0 ? (
-                  <span className="ml-3 text-black/45">
-                    {round.countByPlayer[round.winners[0].id] ?? 0}
-                  </span>
-                ) : null}
               </p>
             </>
           )}

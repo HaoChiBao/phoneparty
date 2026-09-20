@@ -135,83 +135,83 @@ export function ArcheryScene({
         }}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-center px-5 pb-10">
-        <div className="flex max-w-2xl flex-col items-center gap-3 bg-white/92 px-6 py-4 text-center">
-          {round.order.length === 0 ? (
-            <>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Archery
-              </p>
-              <p className="text-2xl font-bold tracking-tight">
-                Waiting for a phone…
-              </p>
-            </>
-          ) : round.done ? (
-            <>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Round over
-              </p>
-              <p className="text-3xl font-bold tracking-tight">
-                {round.winner ? `${round.winner.name} wins` : "No score"}
-                {round.winner ? (
-                  <span className="ml-3 text-black/45">
-                    {totalFor(round.shots[round.winner.id])}
-                  </span>
-                ) : null}
-              </p>
-            </>
-          ) : liveAim ? (
-            <>
-              <p
-                className="text-[11px] uppercase tracking-[0.22em]"
-                style={{ color: activeColor }}
-              >
-                Drawing · arrow {ARROWS_PER_PLAYER - round.arrowsLeft + 1} of{" "}
-                {ARROWS_PER_PLAYER}
-              </p>
-              <p className="text-3xl font-bold tracking-tight">
-                {current?.name} is aiming
-              </p>
-              <WindTag wind={round.wind} />
-            </>
-          ) : (
-            <>
-              <p
-                className="text-[11px] uppercase tracking-[0.22em]"
-                style={{ color: activeColor }}
-              >
-                Up now · {round.arrowsLeft} of {ARROWS_PER_PLAYER} left
-              </p>
-              <p className="text-3xl font-bold tracking-tight">{current?.name}</p>
-              <WindTag wind={round.wind} />
-            </>
-          )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-end px-5 pb-16">
+        <div className="flex max-w-lg flex-col items-end gap-3 text-right">
+          {round.order.length > 0 ? (
+            <div className="flex flex-wrap justify-end gap-x-8 gap-y-1">
+              {round.order.map((player) => {
+                const fired = round.shots[player.id] ?? [];
+                const isCurrent = current?.id === player.id;
+                return (
+                  <p
+                    key={player.id}
+                    className="text-4xl font-bold tracking-tight tabular-nums"
+                    style={{
+                      color: player.color,
+                      opacity: isCurrent || round.done ? 1 : 0.55,
+                    }}
+                  >
+                    {totalFor(fired)}
+                    <span className="ml-2 text-lg font-medium opacity-70">
+                      {player.name}
+                    </span>
+                  </p>
+                );
+              })}
+            </div>
+          ) : null}
 
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {round.order.map((player) => {
-              const fired = round.shots[player.id] ?? [];
-              const isCurrent = current?.id === player.id;
-              return (
-                <span
-                  key={player.id}
-                  className={
-                    isCurrent
-                      ? "px-3 py-1 text-xs font-medium text-white"
-                      : "border px-3 py-1 text-xs"
-                  }
-                  style={
-                    isCurrent
-                      ? { background: player.color }
-                      : { borderColor: player.color, color: "#111111" }
-                  }
+          <div className="rounded-2xl bg-white/92 px-6 py-4">
+            {round.order.length === 0 ? (
+              <>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+                  Archery
+                </p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">
+                  Waiting for a phone…
+                </p>
+              </>
+            ) : round.done ? (
+              <>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+                  Round over
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">
+                  {round.winner ? `${round.winner.name} wins` : "No score"}
+                </p>
+              </>
+            ) : liveAim ? (
+              <>
+                <p
+                  className="text-[11px] uppercase tracking-[0.22em]"
+                  style={{ color: activeColor }}
                 >
-                  {player.name} · {totalFor(fired)}
-                  <span className={isCurrent ? "opacity-70" : "opacity-45"}>
-                    {` (${fired.length}/${ARROWS_PER_PLAYER})`}
-                  </span>
-                </span>
-              );
-            })}
+                  Drawing · arrow {ARROWS_PER_PLAYER - round.arrowsLeft + 1} of{" "}
+                  {ARROWS_PER_PLAYER}
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">
+                  {current?.name} is aiming
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <WindTag wind={round.wind} />
+                </div>
+              </>
+            ) : (
+              <>
+                <p
+                  className="text-[11px] uppercase tracking-[0.22em]"
+                  style={{ color: activeColor }}
+                >
+                  Up now · {round.arrowsLeft} of {ARROWS_PER_PLAYER} left
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">
+                  {current?.name}
+                </p>
+                <div className="mt-2 flex justify-end">
+                  <WindTag wind={round.wind} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

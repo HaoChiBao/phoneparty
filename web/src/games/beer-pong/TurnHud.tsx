@@ -59,26 +59,21 @@ export function TurnHud({
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-5 z-10 flex justify-center px-4">
-        <div className="flex items-center gap-5 bg-white/92 px-5 py-2.5">
-          <div className="min-w-[5.5rem] text-right">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-accent">Blue</p>
-            <p className="text-sm font-medium">{aName}</p>
-          </div>
-          <p className="text-3xl font-bold tabular-nums tracking-tight">
+        <div className="flex items-end gap-6">
+          <p className="text-5xl font-bold tabular-nums tracking-tight text-accent">
             {aLeft}
-            <span className="mx-2 text-black/20">–</span>
-            {bLeft}
+            <span className="ml-2 text-lg font-medium opacity-70">{aName}</span>
           </p>
-          <div className="min-w-[5.5rem]">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-black/45">Black</p>
-            <p className="text-sm font-medium">{bName}</p>
-          </div>
+          <p className="text-5xl font-bold tabular-nums tracking-tight">
+            {bLeft}
+            <span className="ml-2 text-lg font-medium text-black/45">{bName}</span>
+          </p>
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-16 z-10 flex justify-center px-4">
-        <div className="min-w-[16rem] bg-white/92 px-5 py-3 text-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-16 z-10 flex justify-end px-5">
+        <div className="min-w-[16rem] rounded-2xl bg-white/92 px-5 py-3 text-right">
           <div
-            className="mx-auto mb-2 h-1 w-12"
+            className="ml-auto mb-2 h-1 w-12 rounded-full"
             style={{
               background:
                 !testing && match.phase === "aim" && shooterCalibrated

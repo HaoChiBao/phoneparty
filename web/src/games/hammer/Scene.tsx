@@ -40,67 +40,64 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
         </Stage>
       </HostCanvas>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-center px-5 pb-10">
-        <div className="flex max-w-2xl flex-col items-center gap-3 bg-white/92 px-6 py-4 text-center">
-          {round.order.length === 0 ? (
-            <>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Apples
-              </p>
-              <p className="text-2xl font-bold tracking-tight">
-                Waiting for a phone…
-              </p>
-            </>
-          ) : round.done ? (
-            <>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Round over
-              </p>
-              <p className="text-3xl font-bold tracking-tight">
-                {round.winner ? `${round.winner.name} wins` : "No apples"}
-                {round.winner ? (
-                  <span className="ml-3 text-black/45">
-                    {round.swings[round.winner.id]?.score ?? 0} apples
-                  </span>
-                ) : null}
-              </p>
-            </>
-          ) : (
-            <>
-              <p
-                className="text-[11px] uppercase tracking-[0.22em]"
-                style={{ color: activeColor }}
-              >
-                Up now
-              </p>
-              <p className="text-3xl font-bold tracking-tight">
-                {round.current?.name}
-              </p>
-            </>
-          )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex justify-end px-5 pb-16">
+        <div className="flex max-w-lg flex-col items-end gap-3 text-right">
+          {round.order.length > 0 ? (
+            <div className="flex flex-wrap justify-end gap-x-8 gap-y-1">
+              {round.order.map((player) => {
+                const record = round.swings[player.id];
+                const isCurrent = round.current?.id === player.id;
+                return (
+                  <p
+                    key={player.id}
+                    className="text-4xl font-bold tracking-tight tabular-nums"
+                    style={{
+                      color: player.color,
+                      opacity: isCurrent || round.done ? 1 : 0.55,
+                    }}
+                  >
+                    {record ? record.score : "0"}
+                    <span className="ml-2 text-lg font-medium opacity-70">
+                      {player.name}
+                    </span>
+                  </p>
+                );
+              })}
+            </div>
+          ) : null}
 
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {round.order.map((player) => {
-              const record = round.swings[player.id];
-              const isCurrent = round.current?.id === player.id;
-              return (
-                <span
-                  key={player.id}
-                  className={
-                    isCurrent
-                      ? "px-3 py-1 text-xs font-medium text-white"
-                      : "border px-3 py-1 text-xs"
-                  }
-                  style={
-                    isCurrent
-                      ? { background: player.color }
-                      : { borderColor: player.color, color: "#111111" }
-                  }
+          <div className="rounded-2xl bg-white/92 px-6 py-4">
+            {round.order.length === 0 ? (
+              <>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+                  Apples
+                </p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">
+                  Waiting for a phone…
+                </p>
+              </>
+            ) : round.done ? (
+              <>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+                  Round over
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">
+                  {round.winner ? `${round.winner.name} wins` : "No apples"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p
+                  className="text-[11px] uppercase tracking-[0.22em]"
+                  style={{ color: activeColor }}
                 >
-                  {player.name} · {record ? record.score : "—"}
-                </span>
-              );
-            })}
+                  Up now
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">
+                  {round.current?.name}
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ export function HostHud({
       <div className="flex items-start justify-between gap-4">
         {open ? (
           <>
-            <div className="rounded-sm bg-white/90 px-4 py-3">
+            <div className="rounded-2xl bg-white/90 px-4 py-3">
               <div className="flex items-start justify-between gap-4">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
                   TV room
@@ -70,8 +70,8 @@ export function HostHud({
                       onClick={() => onSelectGame(game.id)}
                       className={
                         selected
-                          ? "bg-accent px-2 py-1 text-xs text-white"
-                          : "border border-black/20 bg-white px-2 py-1 text-xs"
+                          ? "rounded-lg bg-accent px-2 py-1 text-xs text-white"
+                          : "rounded-lg border border-black/20 bg-white px-2 py-1 text-xs"
                       }
                     >
                       {game.title}
@@ -80,7 +80,7 @@ export function HostHud({
                 })}
               </div>
             </div>
-            <div className="pointer-events-auto border border-black bg-white p-3">
+            <div className="pointer-events-auto overflow-hidden rounded-2xl border border-black bg-white p-3">
               {joinUrl ? (
                 <QRCodeSVG
                   value={joinUrl}
@@ -101,7 +101,7 @@ export function HostHud({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="pointer-events-auto rounded-sm bg-white/90 px-3 py-2 text-left"
+            className="pointer-events-auto rounded-2xl bg-white/90 px-3 py-2 text-left"
           >
             <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
               Room
@@ -114,9 +114,9 @@ export function HostHud({
           </button>
         )}
       </div>
-      <div className="pointer-events-auto flex flex-wrap gap-2 pb-1">
+      <div className="pointer-events-auto flex flex-wrap justify-end gap-2 pb-1">
         {controllers.length === 0 ? (
-          <span className="bg-white/90 px-3 py-1 text-xs text-black/55">
+          <span className="rounded-2xl bg-white/90 px-3 py-1.5 text-xs text-black/55">
             Waiting for a phone…
           </span>
         ) : (
@@ -125,7 +125,7 @@ export function HostHud({
             return (
               <span
                 key={player.id}
-                className="inline-flex items-center gap-2 px-3 py-1 text-xs text-white"
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs text-white"
                 style={{ background: player.color }}
               >
                 {player.name}
