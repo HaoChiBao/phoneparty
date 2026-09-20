@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
 
@@ -30,9 +30,18 @@ const PLANKS = [
 
 export function HomeLobby() {
   const router = useRouter();
-  const [entered, setEntered] = useState(false);
+  const fieldRef = useRef<HTMLVideoElement>(null);
+  const [phase, setPhase] = useState<"intro" | "overlay" | "done">("intro");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const done = phase === "done";
+
+  useEffect(() => {
+    const video = fieldRef.current;
+    if (!video) return;
+    const play = video.play();
+    if (play) play.catch(() => setPhase("overlay"));
+  }, []);
 
   async function hostGame(gameId: string) {
     if (busy) return;
@@ -49,79 +58,75 @@ export function HomeLobby() {
 
   return (
     <main className="relative h-dvh overflow-hidden bg-[#7eb8e6]">
+      <video
+        ref={fieldRef}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        src="/landing.mp4"
+        poster="/landing-poster.jpg"
+        muted
+        playsInline
+        autoPlay
+        preload="auto"
+        onEnded={() => setPhase((current) => (current === "intro" ? "overlay" : current))}
+      />
+
+      {phase === "overlay" ? (
+        <video
+          className="pointer-events-none absolute bottom-0 left-1/2 z-[9] block h-auto w-[min(96vw,90rem)] -translate-x-1/2"
+          src="/landing-overlay.webm"
+          muted
+          playsInline
+          autoPlay
+          preload="auto"
+          onEnded={() => setPhase("done")}
+          onError={() => setPhase("done")}
+        />
+      ) : null}
+
       <img
-        src="/landing.jpg"
-        alt=""
-        className="pointer-events-none absolute left-1/2 top-0 max-w-none will-change-transform motion-reduce:transition-none"
-        style={{
-          height: "max(175dvh, 100vw)",
-          width: "auto",
-          transform: entered
-            ? "translate(-50%, calc(100dvh - 100%))"
-            : "translate(-50%, 0)",
-          transition: "transform 1.15s cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
+        src="/bearlympics.png"
+        alt="Bearlympics"
+        className={`pointer-events-none absolute left-1/2 top-[7%] z-10 w-[min(86vw,46rem)] origin-top object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.28)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          done
+            ? "-translate-x-1/2 translate-y-0 scale-100"
+            : "-translate-x-1/2 -translate-y-[130%] scale-50"
+        }`}
       />
 
       <div
-        className="absolute left-1/2 z-10 flex w-full max-w-3xl flex-col items-center px-6 transition-[top,transform] duration-[1150ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-        style={{
-          top: entered ? "11%" : "50%",
-          transform: entered ? "translate(-50%, 0)" : "translate(-50%, -50%)",
-        }}
-      >
-        <img
-          src="/bearlympics.png"
-          alt="Bearlympics"
-          className="h-auto w-[min(78vw,40rem)] object-contain mix-blend-screen drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)]"
-        />
-        <button
-          type="button"
-          onClick={() => setEntered(true)}
-          tabIndex={entered ? -1 : 0}
-          aria-hidden={entered}
-          className={`mt-8 h-12 min-w-40 bg-accent px-8 text-[15px] font-medium text-white transition-opacity duration-300 motion-reduce:transition-none ${
-            entered ? "pointer-events-none opacity-0" : "opacity-100"
-          }`}
-        >
-          Enter
-        </button>
-      </div>
-
-      <div
-        className={`absolute bottom-[2vh] right-[1.5vw] z-10 w-[min(42vw,26rem)] origin-bottom-right transition-opacity duration-500 motion-reduce:transition-none ${
-          entered
-            ? "opacity-100 delay-300"
-            : "pointer-events-none opacity-0"
+        className={`absolute inset-x-0 bottom-0 z-10 flex justify-end transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          done ? "translate-y-0" : "pointer-events-none translate-y-full"
         }`}
       >
-        <div className={`relative ${busy ? "opacity-70" : ""}`}>
-          <img
-            src="/landing-sign.png"
-            alt=""
-            className="pointer-events-none h-auto w-full select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]"
-          />
-          {PLANKS.map((plank) => (
-            <button
-              key={plank.label}
-              type="button"
-              disabled={busy}
-              onClick={() => hostGame(plank.gameId)}
-              style={plank.style}
-              className="absolute cursor-pointer rounded-sm bg-transparent hover:bg-white/10 disabled:cursor-wait"
-              aria-label={
-                plank.label === "Host game"
-                  ? "Host a game"
-                  : `Host ${plank.label}`
-              }
+        <div className="relative -bottom-[8vh] -right-[1vw] w-[min(58vw,36rem)] origin-bottom rotate-[-5deg] skew-x-[-5deg]">
+          <div className={`relative ${busy ? "opacity-70" : ""}`}>
+            <img
+              src="/landing-sign.png"
+              alt=""
+              className="pointer-events-none h-auto w-full select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.28)]"
             />
-          ))}
+            {PLANKS.map((plank) => (
+              <button
+                key={plank.label}
+                type="button"
+                disabled={busy || !done}
+                onClick={() => hostGame(plank.gameId)}
+                style={plank.style}
+                className="absolute cursor-pointer rounded-sm bg-transparent hover:bg-white/10 disabled:cursor-wait"
+                aria-label={
+                  plank.label === "Host game"
+                    ? "Host a game"
+                    : `Host ${plank.label}`
+                }
+              />
+            ))}
+          </div>
+          {error && (
+            <p className="mt-2 text-right text-sm font-medium text-black">
+              {error}
+            </p>
+          )}
         </div>
-        {error && (
-          <p className="mt-2 text-right text-sm font-medium text-black">
-            {error}
-          </p>
-        )}
       </div>
     </main>
   );

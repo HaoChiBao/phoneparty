@@ -31,6 +31,9 @@ function isAllowedOrigin(origin?: string) {
     const { hostname } = new URL(origin);
     if (hostname === "localhost" || hostname === "127.0.0.1") return true;
     if (hostname.endsWith(".vercel.app")) return true;
+    if (hostname === "bearlympics.com" || hostname.endsWith(".bearlympics.com")) {
+      return true;
+    }
   } catch {
     return false;
   }
