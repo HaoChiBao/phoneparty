@@ -14,6 +14,7 @@ export function ArcheryPad({
   actionsByPlayer,
   motionReady,
   sample,
+  capturingMotion = false,
 }: GamePadProps) {
   const controllers = useMemo(
     () => players.filter((player) => player.role === "controller"),
@@ -60,7 +61,7 @@ export function ArcheryPad({
     [sendAction],
   );
 
-  const drawing = drawn && motionReady;
+  const drawing = drawn && motionReady && !capturingMotion;
   const { hold, steady } = useSteadyHold({
     active: drawing,
     aimRef,
