@@ -51,17 +51,23 @@ export function getOrCreateRoom(code?: string) {
 
 export function addPlayer(room: Room, id: string, role: Role, name?: string) {
   const usedColors = new Set(
-    [...room.players.values()].map((player) => player.color),
+    [...room.players.values()]
+      .filter((player) => player.role === "controller")
+      .map((player) => player.color),
   );
   const color =
-    PLAYER_COLORS.find((entry) => !usedColors.has(entry)) ??
-    PLAYER_COLORS[room.players.size % PLAYER_COLORS.length];
+    role === "host"
+      ? "#111111"
+      : (PLAYER_COLORS.find((entry) => !usedColors.has(entry)) ??
+        PLAYER_COLORS[usedColors.size % PLAYER_COLORS.length]);
   const player: Player = {
     id,
     role,
     name:
       name?.trim() ||
-      (role === "host" ? "TV" : `Player ${room.players.size + 1}`),
+      (role === "host"
+        ? "TV"
+        : `Player ${[...room.players.values()].filter((p) => p.role === "controller").length + 1}`),
     color,
     connectedAt: Date.now(),
   };

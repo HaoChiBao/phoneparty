@@ -15,6 +15,7 @@ export function ControllerPad({ code }: { code: string }) {
   const [sample, setSample] = useState<GyroSample | null>(null);
   const latest = useRef<GyroSample | null>(null);
   const self = players.find((player) => player.id === selfId);
+  const accent = self?.color ?? "#0057FF";
 
   useEffect(() => {
     if (!motionReady) return;
@@ -67,47 +68,44 @@ export function ControllerPad({ code }: { code: string }) {
   }
 
   return (
-    <div
-      className="flex min-h-dvh flex-col justify-between bg-[#14150f] px-5 py-6 text-[#f4f1e6]"
-      style={{ background: `radial-gradient(circle at top, ${self?.color ?? "#c4f542"}22, #14150f 42%)` }}
-    >
+    <div className="flex min-h-dvh flex-col justify-between bg-white px-5 py-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.28em] text-[#c4f542]">
-          Controller
+        <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+          Phone controller
         </p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">{code}</h1>
-        <p className="mt-2 text-sm text-[#d7d3c4]">
+        <h1 className="mt-2 text-4xl font-bold tracking-tight">{code}</h1>
+        <p className="mt-2 text-sm text-black/60">
           {connected
-            ? "You are in the session. Enable motion, point at the TV, then calibrate."
-            : "Joining the session…"}
+            ? "You are in the room. Enable motion, point at the TV, then calibrate."
+            : "Joining the room…"}
         </p>
         {(error || motionError) && (
-          <p className="mt-3 text-sm text-[#ff6b8a]">{error ?? motionError}</p>
+          <p className="mt-3 text-sm text-accent">{error ?? motionError}</p>
         )}
       </header>
 
-      <div className="flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-5">
         <button
           type="button"
           aria-label="Aim pad"
-          className="h-36 w-20 touch-none rounded-[1.6rem] border-2 bg-[#1c1d16] shadow-inner"
+          className="h-40 w-[88px] touch-none border-2 bg-white"
           onPointerMove={aimFromPointer}
           onPointerDown={aimFromPointer}
           style={{
-            borderColor: self?.color ?? "#c4f542",
+            borderColor: accent,
             transform: sample
-              ? `rotate(${sample.gamma * 0.8}deg) rotateX(${sample.beta * 0.25}deg)`
+              ? `rotate(${sample.gamma * 0.8}deg)`
               : undefined,
           }}
         >
           <div
-            className="mx-auto mt-3 h-4 w-4 rounded-full"
-            style={{ background: self?.color ?? "#c4f542" }}
+            className="mx-auto mt-3 h-3 w-3 rounded-full"
+            style={{ background: accent }}
           />
         </button>
-        <p className="font-mono text-xs text-[#9d9a8c]">
+        <p className="text-xs tracking-wide text-black/40">
           {sample
-            ? `α ${sample.alpha.toFixed(0)}  β ${sample.beta.toFixed(0)}  γ ${sample.gamma.toFixed(0)}`
+            ? `${sample.beta.toFixed(0)}°  ${sample.gamma.toFixed(0)}°`
             : "No gyro yet"}
         </p>
       </div>
@@ -117,7 +115,7 @@ export function ControllerPad({ code }: { code: string }) {
           <button
             type="button"
             onClick={enableMotion}
-            className="rounded-full bg-[#c4f542] px-5 py-4 text-base font-semibold text-[#14150f]"
+            className="h-12 bg-accent text-[15px] font-medium text-white"
           >
             Enable motion
           </button>
@@ -125,14 +123,14 @@ export function ControllerPad({ code }: { code: string }) {
           <button
             type="button"
             onClick={calibrate}
-            className="rounded-full bg-[#f4f1e6] px-5 py-4 text-base font-semibold text-[#14150f]"
+            className="h-12 border border-black text-[15px] font-medium"
           >
             Calibrate at the TV
           </button>
         )}
-        <p className="text-center text-xs text-[#9d9a8c]">
-          iPhones need HTTPS and a tap before the gyro will stream. On a
-          computer, drag on the remote to aim.
+        <p className="text-center text-xs text-black/40">
+          iPhones need HTTPS and a tap before the gyro streams. On a computer,
+          drag on the remote to aim.
         </p>
       </div>
     </div>

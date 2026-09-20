@@ -65,23 +65,19 @@ function Wand({ player, sample, calib }: WandState) {
       <group ref={group} position={[0, 1.15, 3.4]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.18]}>
           <cylinderGeometry args={[0.045, 0.055, 0.72, 16]} />
-          <meshStandardMaterial
-            color="#1a1a1a"
-            metalness={0.4}
-            roughness={0.35}
-          />
+          <meshStandardMaterial color="#111111" metalness={0.2} roughness={0.4} />
         </mesh>
         <mesh position={[0, 0, -0.22]}>
           <sphereGeometry args={[0.07, 20, 20]} />
           <meshStandardMaterial
             color={player.color}
             emissive={player.color}
-            emissiveIntensity={1.4}
+            emissiveIntensity={0.8}
           />
         </mesh>
         <mesh ref={beam} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 1, 8]} />
-          <meshBasicMaterial color={player.color} transparent opacity={0.55} />
+          <meshBasicMaterial color={player.color} transparent opacity={0.7} />
         </mesh>
       </group>
       <mesh ref={hit} visible={false}>
@@ -103,7 +99,7 @@ function Targets() {
       {spots.map(([x, y, z]) => (
         <mesh key={`${x}-${y}`} position={[x, y, z]}>
           <ringGeometry args={[0.28, 0.38, 32]} />
-          <meshBasicMaterial color="#f2f2ea" />
+          <meshBasicMaterial color="#0057FF" />
         </mesh>
       ))}
     </group>
@@ -113,30 +109,30 @@ function Targets() {
 function Stage({ wands }: { wands: WandState[] }) {
   return (
     <>
-      <color attach="background" args={["#10110f"]} />
-      <fog attach="fog" args={["#10110f", 8, 22]} />
+      <color attach="background" args={["#f4f6fa"]} />
+      <fog attach="fog" args={["#f4f6fa", 12, 28]} />
       <PerspectiveCamera makeDefault position={[0, 1.6, 6.4]} fov={55} />
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={1.1} />
-      <pointLight position={[0, 3, -4]} intensity={8} color="#c4f542" distance={12} />
+      <pointLight position={[0, 3, -4]} intensity={6} color="#0057FF" distance={14} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[18, 16]} />
-        <meshStandardMaterial color="#171814" />
+        <meshStandardMaterial color="#ffffff" />
       </mesh>
       <Grid
         args={[18, 16]}
         cellSize={0.5}
-        cellThickness={0.6}
-        cellColor="#2a2d24"
+        cellThickness={0.45}
+        cellColor="#d7dce6"
         sectionSize={2}
-        sectionThickness={1.1}
-        sectionColor="#3d422f"
-        fadeDistance={16}
+        sectionThickness={1}
+        sectionColor="#111111"
+        fadeDistance={18}
         position={[0, 0.01, 0]}
       />
       <mesh position={[0, 2.4, -6]}>
         <planeGeometry args={[12, 5.2]} />
-        <meshStandardMaterial color="#22241c" />
+        <meshStandardMaterial color="#ffffff" />
       </mesh>
       <Targets />
       {wands.map((wand) => (

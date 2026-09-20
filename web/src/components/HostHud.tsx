@@ -19,40 +19,48 @@ export function HostHud({
   const controllers = players.filter((player) => player.role === "controller");
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-5 text-[#f4f1e6]">
+    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-[#c4f542]">
-            Phone Party
+        <div className="rounded-sm bg-white/90 px-4 py-3">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+            TV room
           </p>
-          <h1 className="mt-1 font-sans text-4xl font-semibold tracking-tight">
-            {code}
-          </h1>
-          <p className="mt-2 max-w-sm text-sm text-[#d7d3c4]">
-            Scan the code with a phone. Point at the wall, then calibrate.
+          <h1 className="mt-1 text-4xl font-bold tracking-tight">{code}</h1>
+          <p className="mt-2 max-w-xs text-sm text-black/60">
+            Scan the QR with a phone. Point at the wall, then calibrate.
           </p>
-          <p className="mt-3 text-xs text-[#9d9a8c]">
-            {connected ? "Realtime connected" : "Connecting to session…"}
+          <p className="mt-2 text-xs text-black/45">
+            {connected ? "Realtime connected" : "Connecting…"}
             {error ? ` · ${error}` : ""}
           </p>
         </div>
-        <div className="pointer-events-auto rounded-2xl bg-[#f4f1e6] p-3 text-[#14150f] shadow-xl">
-          <QRCodeSVG value={joinUrl} size={132} includeMargin={false} />
-          <p className="mt-2 max-w-[132px] text-center text-[11px] leading-4">
-            {joinUrl.replace(/^https?:\/\//, "")}
+        <div className="pointer-events-auto border border-black bg-white p-3">
+          {joinUrl ? (
+            <QRCodeSVG
+              value={joinUrl}
+              size={140}
+              bgColor="#ffffff"
+              fgColor="#000000"
+              includeMargin={false}
+            />
+          ) : (
+            <div className="h-[140px] w-[140px] bg-black/5" />
+          )}
+          <p className="mt-2 max-w-[140px] text-center text-[11px] leading-4 text-black/55">
+            Phone controller
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pb-1">
         {controllers.length === 0 ? (
-          <span className="rounded-full border border-[#3a3d31] bg-[#14150f]/80 px-3 py-1 text-xs">
+          <span className="bg-white/90 px-3 py-1 text-xs text-black/55">
             Waiting for a phone…
           </span>
         ) : (
           controllers.map((player) => (
             <span
               key={player.id}
-              className="rounded-full px-3 py-1 text-xs text-[#14150f]"
+              className="px-3 py-1 text-xs text-white"
               style={{ background: player.color }}
             >
               {player.name}

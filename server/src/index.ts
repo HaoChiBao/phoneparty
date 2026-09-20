@@ -23,7 +23,15 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
 function isAllowedOrigin(origin?: string) {
   if (!origin) return true;
   if (allowedOrigins.length === 0) return true;
-  return allowedOrigins.includes(origin);
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+    if (hostname.endsWith(".vercel.app")) return true;
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 function writeCors(req: IncomingMessage, res: ServerResponse) {

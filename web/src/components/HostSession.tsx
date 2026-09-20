@@ -17,7 +17,7 @@ export function HostSession({ code }: { code: string }) {
   const controllers = players.filter((player) => player.role === "controller");
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-[#10110f]">
+    <div className="relative h-dvh overflow-hidden bg-white">
       <PartyScene
         controllers={controllers}
         gyroByPlayer={gyroByPlayer}

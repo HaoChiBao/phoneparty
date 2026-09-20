@@ -25,11 +25,11 @@ export type CalibratedPose = {
 };
 
 export const PLAYER_COLORS = [
-  "#c4f542",
-  "#ffb020",
-  "#5ee0ff",
-  "#ff6b8a",
-  "#c084fc",
+  "#0057FF",
+  "#111111",
+  "#4C8DFF",
+  "#0039B3",
+  "#7AA6FF",
 ] as const;
 
 export interface ClientToServerEvents {

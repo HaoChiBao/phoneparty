@@ -17,7 +17,7 @@ export function HomeLobby() {
       const room = await createRoom();
       router.push(`/play/${room.code}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start a party");
+      setError(err instanceof Error ? err.message : "Could not start a room");
       setBusy(false);
     }
   }
@@ -33,42 +33,42 @@ export function HomeLobby() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 py-16">
-      <p className="text-xs uppercase tracking-[0.32em] text-[#c4f542]">
-        Wii-style phone remote
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-6 py-16">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+        Phone remote
       </p>
-      <h1 className="mt-4 text-5xl font-semibold tracking-tight text-[#f4f1e6] sm:text-6xl">
-        Phone Party
-      </h1>
-      <p className="mt-4 max-w-md text-base leading-7 text-[#d7d3c4]">
-        Host a 3D room on the TV. Phones join with a QR code and steer a pointer
-        with the gyro.
+      <h1 className="mt-3 text-5xl font-bold tracking-tight">Phone Party</h1>
+      <p className="mt-4 max-w-sm text-[17px] leading-6 text-black/70">
+        Open a 3D room on the TV. Phones join with a QR code and aim with the
+        gyro.
       </p>
+
       <div className="mt-10 flex flex-col gap-3">
         <button
           type="button"
           onClick={hostParty}
           disabled={busy}
-          className="rounded-full bg-[#c4f542] px-5 py-4 text-base font-semibold text-[#14150f] disabled:opacity-60"
+          className="h-12 bg-accent px-5 text-[15px] font-medium text-white disabled:opacity-50"
         >
-          {busy ? "Opening room…" : "Host a party"}
+          {busy ? "Opening room…" : "Host a room"}
         </button>
         <form onSubmit={joinParty} className="flex gap-2">
           <input
             value={code}
             onChange={(event) => setCode(event.target.value.toUpperCase())}
-            placeholder="ROOM"
+            placeholder="CODE"
             maxLength={6}
-            className="w-full rounded-full border border-[#3a3d31] bg-[#1c1d16] px-5 py-3 font-mono tracking-[0.3em] text-[#f4f1e6] outline-none focus:border-[#c4f542]"
+            aria-label="Room code"
+            className="h-12 w-full border border-black/15 bg-white px-4 tracking-[0.28em] outline-none focus:border-accent"
           />
           <button
             type="submit"
-            className="rounded-full border border-[#3a3d31] px-5 py-3 text-sm font-medium text-[#f4f1e6]"
+            className="h-12 border border-black px-5 text-[15px] font-medium"
           >
             Join
           </button>
         </form>
-        {error && <p className="text-sm text-[#ff6b8a]">{error}</p>}
+        {error && <p className="text-sm text-accent">{error}</p>}
       </div>
     </main>
   );
