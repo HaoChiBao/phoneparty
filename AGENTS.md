@@ -106,7 +106,7 @@ Rules:
 
 `web/src/lib/orientation.ts` converts device sensors into the sample the server forwards.
 
-- **Aim axis:** the front of the phone (screen / front-camera face, device +Z). After the usual DeviceOrientation `YXZ` + −90° X map, a 180° Y flip makes wand −Z point out that face. Hold the phone so the camera side faces the TV.
+- **Aim axis:** the front of the phone (screen / front-camera face). Point that face at the TV and calibrate; later samples are relative to that pose. Gyro uses DeviceOrientation `YXZ` plus a −90° X correction. Do not add a 180° Y flip on both sample and calib — that inverts tilt.
 - **Gyro / aim:** `DeviceOrientationEvent` `alpha`, `beta`, `gamma`. Calibration stores a pose and later samples are relative to it.
 - **Position:** `DeviceMotionEvent.acceleration` (gravity removed). Integrated with a deadzone and velocity damping into bounded `x`, `y`, `z`. This is not GPS and it will drift. Calibrate resets position to the origin.
 - **iOS:** both `DeviceOrientationEvent.requestPermission` and `DeviceMotionEvent.requestPermission` run on the Enable motion tap. Needs HTTPS (or localhost).

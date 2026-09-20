@@ -8,7 +8,7 @@ import {
   readOrientationEvent,
   requestMotionPermission,
   resetPosition,
-  setRelativeQuaternion,
+  setDeviceQuaternion,
   stepPosition,
 } from "@/lib/orientation";
 import { getGame } from "@/games/catalog";
@@ -32,7 +32,6 @@ export function ControllerPad({ code }: { code: string }) {
   const latest = useRef<GyroSample | null>(null);
   const position = useRef(createPositionState());
   const worldQuat = useRef(new THREE.Quaternion());
-  const scratch = useRef(new THREE.Quaternion());
   const self = players.find((player) => player.id === selfId);
   const accent = self?.color ?? "#0057FF";
   const game = getGame(gameId);
@@ -54,7 +53,7 @@ export function ControllerPad({ code }: { code: string }) {
       next.x = pos.x;
       next.y = pos.y;
       next.z = pos.z;
-      setRelativeQuaternion(worldQuat.current, next, null, scratch.current);
+      setDeviceQuaternion(worldQuat.current, next.alpha, next.beta, next.gamma);
       publish(next);
     };
 
@@ -99,8 +98,8 @@ export function ControllerPad({ code }: { code: string }) {
     const ny = (event.clientY - rect.top) / rect.height;
     const next: GyroSample = {
       alpha: 0,
-      beta: (ny - 0.5) * 80,
-      gamma: (0.5 - nx) * 80,
+      beta: (0.5 - ny) * 80,
+      gamma: (nx - 0.5) * 80,
       x: (nx - 0.5) * 1.4,
       y: (0.5 - ny) * 1,
       z: 0,

@@ -45,7 +45,7 @@ export function Wand({ player, sample, calib }: WandState) {
     group.current.position.set(sample.x, 1.15 + sample.y, 3.4 + sample.z);
 
     origin.set(0, 0, 0).applyMatrix4(group.current.matrixWorld);
-    // Local -Z is the phone front after setDeviceQuaternion's qFront flip.
+    // Local -Z is wand forward. After calibrate-at-the-TV that is the phone front.
     direction.set(0, 0, -1).applyQuaternion(group.current.quaternion);
     const wallZ = -6;
     const t = direction.z !== 0 ? (wallZ - origin.z) / direction.z : -1;
