@@ -1,3 +1,4 @@
+import { archeryGame } from "./archery";
 import { beerPongGame } from "./beer-pong";
 import { hammerGame } from "./hammer";
 import { rangeGame } from "./range";
@@ -6,6 +7,7 @@ import type { GameDefinition } from "./types";
 
 const games: GameDefinition[] = [
   hammerGame,
+  archeryGame,
   rangeGame,
   beerPongGame,
   sandboxGame,
