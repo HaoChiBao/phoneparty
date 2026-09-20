@@ -52,8 +52,8 @@ function FitView() {
       if (width < 2 || height < 2) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       gl.setPixelRatio(dpr);
-      gl.setSize(width, height, false);
-      setSize(width, height, false);
+      gl.setSize(width, height);
+      setSize(width, height);
       gl.domElement.style.width = "100%";
       gl.domElement.style.height = "100%";
       gl.domElement.style.display = "block";
