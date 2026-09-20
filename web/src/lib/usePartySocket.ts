@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { connectRealtime } from "./realtime";
 import type {
@@ -137,17 +137,17 @@ export function usePartySocket(code: string, role: Role, name?: string) {
     };
   }, [code, name, role]);
 
-  function selectGame(nextGameId: string) {
+  const selectGame = useCallback((nextGameId: string) => {
     socketRef.current?.emit("selectGame", { gameId: nextGameId });
-  }
+  }, []);
 
-  function sendGameAction(type: string, data?: unknown) {
+  const sendGameAction = useCallback((type: string, data?: unknown) => {
     socketRef.current?.emit("gameAction", { type, data });
-  }
+  }, []);
 
-  function kickPlayer(playerId: string) {
+  const kickPlayer = useCallback((playerId: string) => {
     socketRef.current?.emit("kickPlayer", { playerId });
-  }
+  }, []);
 
   function rejoin() {
     skipJoin.current = false;

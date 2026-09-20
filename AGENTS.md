@@ -82,7 +82,7 @@ Socket.IO events:
 - `calibrate({ alpha, beta, gamma, x, y, z })`
 - `selectGame({ gameId }, ack)` — host only
 - `kickPlayer({ playerId }, ack)` — host only; drops a controller from the room
-- `gameAction({ type, data? })` — controller only; per-game buttons without a protocol change
+- `gameAction({ type, data? })` — controllers send per-game buttons; the host may send a match snapshot so every phone can follow the turn. No new event name for a single-game button.
 
 **Server → client**
 
@@ -96,7 +96,7 @@ Socket.IO events:
 Rules:
 
 - Hosts may create the room on join. Controllers join an existing room or get "Room not found."
-- Only controllers emit `gyro` / `calibrate` / `gameAction`.
+- Only controllers emit `gyro` / `calibrate`. Controllers and the host may emit `gameAction`. The host uses that for beer pong turn snapshots (`pong`); phones never throw from a host action.
 - Only the host emits `selectGame` or `kickPlayer`. The server does not validate `gameId` against the web catalog; unknown ids fall back to Range on the client. A kicked phone can scan or tap **Rejoin** to come back.
 - Gyro and `gameAction` are rate-limited on the server to about 32ms.
 - Hosts do not consume player colors. Controllers take `#0057FF`, then the remaining blues/blacks.
@@ -188,7 +188,7 @@ Each game is a `GameDefinition` (`id`, `title`, `blurb`, `Scene`, optional `PadE
 2. Export a `GameDefinition` from that folder’s `index.ts`. Put the 3D playfield in `Scene.tsx`.
 3. Register it in `web/src/games/catalog.ts`. Leave the server alone unless you need a new shared event.
 4. In `Scene`, read `gyroByPlayer` and `calibByPlayer`. Treat `alpha/beta/gamma` as aim and `x/y/z` as a short-range position offset. Reuse `web/src/games/shared/Wand.tsx` and `HostCanvas.tsx` when they fit.
-5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button. `PadExtra` also receives `players`, `selfId`, `actionsByPlayer`, `motionReady`, the latest `sample`, and `capturingMotion`, so a pad can follow turn order on its own: `gameActionState` is broadcast to the whole room, including the phone that sent it, so the TV and every phone derive the same game state with no server change. Apples does this — see `web/src/games/hammer/logic.ts`. The Ready button is local pad state (green full-screen), not a socket event; only the swing itself is a `gameAction`. Set `hideAimPad` when a game does not aim at the TV; the shared Enable motion button stays either way, since it is the sensor permission gate. Set `motionLabels` to the gestures the shared recorder should tag (`bear hit`, `beer pong flick`). If omitted, the recorder uses `{title} move`.
+5. Extra phone buttons go in optional `PadExtra`. Call `sendAction("shoot")` (or similar). The host scene reads `actionsByPlayer`. Do not add a new socket event for a single-game button. `PadExtra` also receives `players`, `selfId`, `actionsByPlayer`, `motionReady`, the latest `sample`, and `capturingMotion`, so a pad can follow turn order on its own: `gameActionState` is broadcast to the whole room, including the phone that sent it. Apples derives turns from swings — see `web/src/games/hammer/logic.ts`. Beer pong needs the TV result, so the host also emits a `pong` snapshot over `gameAction`; phones turn green only when that snapshot says they are up and they have calibrated. The Ready button is local pad state (green full-screen), not a socket event; only the swing itself is a `gameAction`. Set `hideAimPad` when a game does not aim at the TV; the shared Enable motion button stays either way, since it is the sensor permission gate. Set `motionLabels` to the gestures the shared recorder should tag (`bear hit`, `beer pong flick`). If omitted, the recorder uses `{title} move`.
 6. Chrome stays Helvetica / white / black / blue. Art direction belongs on the 3D canvas.
 
 `gameId` is stored on the room and broadcast in `roomState`. The host picker and home lobby both read `listGames()`. The shared remote (enable motion, calibrate, aim pad) stays in `ControllerPad`.

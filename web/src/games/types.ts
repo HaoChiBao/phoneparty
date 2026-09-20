@@ -11,6 +11,8 @@ export type GameSceneProps = {
   gyroByPlayer: Record<string, GyroSample>;
   calibByPlayer: Record<string, CalibratedPose>;
   actionsByPlayer: Record<string, GameActionState>;
+  // Host may emit gameAction snapshots so phones can follow turn state.
+  sendAction?: (type: string, data?: unknown) => void;
 };
 
 export type GamePadProps = {
