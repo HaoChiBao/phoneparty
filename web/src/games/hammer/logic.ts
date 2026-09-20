@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameActionState, Player } from "@/lib/protocol";
 
 export const MAX_SCORE = 100;
+/** A 95+ hit dumps gold apples and a heavier tree shake. */
 export const BELL_SCORE = 95;
 
 export type SwingRecord = {

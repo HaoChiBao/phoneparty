@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GamePadProps } from "@/games/types";
+import { ACTION_TUNE_EVENT } from "@/lib/actionTune";
 import { powerToScore, useRoundState } from "./logic";
 import { SwingHint } from "./SwingHint";
 import {
@@ -23,6 +24,7 @@ export function HammerPad({
   actionsByPlayer,
   motionReady,
   sample,
+  capturingMotion = false,
 }: GamePadProps) {
   const controllers = useMemo(
     () => players.filter((player) => player.role === "controller"),
@@ -42,7 +44,17 @@ export function HammerPad({
     null,
   );
 
-  const tune = useMemo(() => tuneFromSensitivity(sensitivity), [sensitivity]);
+  const [tuneRev, setTuneRev] = useState(0);
+  const tune = useMemo(
+    () => tuneFromSensitivity(sensitivity),
+    [sensitivity, tuneRev],
+  );
+
+  useEffect(() => {
+    const refresh = () => setTuneRev((n) => n + 1);
+    window.addEventListener(ACTION_TUNE_EVENT, refresh);
+    return () => window.removeEventListener(ACTION_TUNE_EVENT, refresh);
+  }, []);
   const aimedDown = isAimedDown(sample, rest, tune);
   const waitingToSwing = myTurn && !mySwing && motionReady && !testing;
   const screenReady = armed && waitingToSwing;
@@ -60,7 +72,10 @@ export function HammerPad({
   );
 
   const { phase, liveMag } = useSwingDetector({
-    active: motionReady && (testing || (waitingToSwing && armed)),
+    active:
+      motionReady &&
+      !capturingMotion &&
+      (testing || (waitingToSwing && armed)),
     armed: testing || armed,
     aimedDown,
     tune,
@@ -89,7 +104,7 @@ export function HammerPad({
             <p className="max-w-xs text-center text-[15px] leading-5 text-white/90">
               {phase === "capturing"
                 ? "Got it…"
-                : "Phone is live. Swing down like a mallet."}
+                : "Phone is live. Swing down at the tree."}
             </p>
           </div>
           <button
@@ -117,7 +132,12 @@ export function HammerPad({
               ? round.winner.id === selfId
                 ? "You win"
                 : `${round.winner.name} wins`
-              : "No score"}
+              : "No apples"}
+            {round.winner ? (
+              <span className="ml-3 text-black/45">
+                {round.swings[round.winner.id]?.score ?? 0}
+              </span>
+            ) : null}
           </p>
           <button
             type="button"
@@ -130,7 +150,7 @@ export function HammerPad({
       ) : mySwing && !testing ? (
         <>
           <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-            Your swing
+            Your apples
           </p>
           <p className="text-6xl font-bold tracking-tight">{mySwing.score}</p>
           <p className="text-center text-sm text-black/55">
@@ -152,7 +172,7 @@ export function HammerPad({
             className="text-center text-[15px] font-medium"
             style={{ color: aimedDown ? accent : "#111111" }}
           >
-            Hold the phone like a hammer, then tap Ready.
+            Hold the phone like a paw, then tap Ready.
           </p>
           <button
             type="button"
@@ -171,7 +191,7 @@ export function HammerPad({
             {round.current ? `${round.current.name} is up` : "Getting ready…"}
           </p>
           <p className="text-center text-sm text-black/55">
-            Everyone swings once. Highest score wins.
+            Everyone takes one swing. Most apples wins.
           </p>
         </>
       ) : null}

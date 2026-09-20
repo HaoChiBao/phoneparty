@@ -4,7 +4,14 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { GamePadProps } from "@/games/types";
 import { createFlickState, readFlickAccel, stepFlick, swipeFlick } from "./flick";
 
-export function BeerPongPad({ sendAction, sample, calib, onCalibrate, motionReady }: GamePadProps) {
+export function BeerPongPad({
+  sendAction,
+  sample,
+  calib,
+  onCalibrate,
+  motionReady,
+  capturingMotion = false,
+}: GamePadProps) {
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState("Calibrate at the TV, then flick.");
   const flick = useRef(createFlickState());
@@ -28,6 +35,7 @@ export function BeerPongPad({ sendAction, sample, calib, onCalibrate, motionRead
   }, [ready]);
 
   useEffect(() => {
+    if (capturingMotion) return;
     const onMotion = (event: DeviceMotionEvent) => {
       const accel = readFlickAccel(event);
       if (!accel) return;
@@ -36,7 +44,7 @@ export function BeerPongPad({ sendAction, sample, calib, onCalibrate, motionRead
     };
     window.addEventListener("devicemotion", onMotion, true);
     return () => window.removeEventListener("devicemotion", onMotion, true);
-  }, [ready]);
+  }, [capturingMotion, ready]);
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     swipe.current = { y: event.clientY, t: Date.now() };
@@ -48,6 +56,10 @@ export function BeerPongPad({ sendAction, sample, calib, onCalibrate, motionRead
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (capturingMotion) {
+      swipe.current = null;
+      return;
+    }
     const start = swipe.current;
     swipe.current = null;
     if (!start) return;

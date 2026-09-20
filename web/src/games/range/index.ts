@@ -6,4 +6,5 @@ export const rangeGame: GameDefinition = {
   title: "Range",
   blurb: "Aim at the rings.",
   Scene: RangeScene,
+  motionLabels: [{ id: "aim", title: "range aim" }],
 };

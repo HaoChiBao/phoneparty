@@ -25,6 +25,14 @@ export type GamePadProps = {
   sample: GyroSample | null;
   calib: CalibratedPose | null;
   onCalibrate: () => void;
+  // True while the shared recorder is capturing a clip. Pads must not fire a
+  // scored action from the same motion.
+  capturingMotion?: boolean;
+};
+
+export type MotionLabel = {
+  id: string;
+  title: string;
 };
 
 export type GameDefinition = {
@@ -37,4 +45,11 @@ export type GameDefinition = {
   hideAimPad?: boolean;
   // Keep the shared Calibrate button when the aim pad is hidden.
   showCalibrate?: boolean;
+  // Gesture names for the shared motion recorder ("bear hit", "beer pong flick").
+  motionLabels?: MotionLabel[];
 };
+
+export function motionLabelsFor(game: GameDefinition): MotionLabel[] {
+  if (game.motionLabels?.length) return game.motionLabels;
+  return [{ id: "move", title: `${game.title} move` }];
+}

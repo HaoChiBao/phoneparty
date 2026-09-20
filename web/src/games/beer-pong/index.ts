@@ -10,4 +10,5 @@ export const beerPongGame: GameDefinition = {
   PadExtra: BeerPongPad,
   hideAimPad: true,
   showCalibrate: true,
+  motionLabels: [{ id: "flick", title: "beer pong flick" }],
 };
