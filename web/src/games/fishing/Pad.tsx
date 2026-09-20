@@ -73,7 +73,8 @@ export function FishingPad({
     pendingReels.current = 0;
     lastSentN.current = 0;
     lastSentAt.current = 0;
-    setLocalReels(0);
+    const frame = requestAnimationFrame(() => setLocalReels(0));
+    return () => cancelAnimationFrame(frame);
   }, [fightFishId]);
 
   const flushReels = useCallback(() => {
@@ -133,37 +134,57 @@ export function FishingPad({
 
   if (fight && hooked && fishing) {
     return (
-      <div className="flex w-full flex-col items-center gap-3">
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            reelClick();
-          }}
-          className="flex min-h-[58vh] w-full flex-col items-center justify-center gap-4 text-white"
-          style={{ background: accent, touchAction: "none", userSelect: "none" }}
-        >
-          <p className="text-[11px] uppercase tracking-[0.22em] text-white/80">
-            {KIND_LABEL[hooked.kind]} · mash to reel
-          </p>
-          <p className="text-6xl font-bold tracking-tight">Reel</p>
-          <div className="h-2 w-48 bg-white/25">
-            <div
-              className="h-2 bg-white transition-[width] duration-75"
-              style={{ width: `${reelProgress * 100}%` }}
-            />
-          </div>
-          <p className="text-sm text-white/80">
-            {shownReels} / {need}
-          </p>
-        </button>
-        <p className="text-sm text-black/55">You · {mine}</p>
-      </div>
+      <button
+        type="button"
+        aria-label="Reel the fish in. Tap repeatedly."
+        onPointerDown={(event) => {
+          event.preventDefault();
+          reelClick();
+        }}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6 text-white"
+        style={{ background: accent, touchAction: "none", userSelect: "none" }}
+      >
+        <style>{`
+          @keyframes fishing-tap {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.58; }
+            38% { transform: translateY(-12px) scale(1.14); opacity: 1; }
+          }
+          .fishing-tap { animation: fishing-tap 0.72s ease-in-out infinite; }
+          .fishing-tap:nth-child(2) { animation-delay: 0.12s; }
+          .fishing-tap:nth-child(3) { animation-delay: 0.24s; }
+          @media (prefers-reduced-motion: reduce) {
+            .fishing-tap { animation: none; opacity: 1; }
+          }
+        `}</style>
+        <p className="text-[11px] uppercase tracking-[0.28em] text-white/75">
+          {KIND_LABEL[hooked.kind]} on the line
+        </p>
+        <p className="text-center text-6xl font-bold tracking-tight">Reel it in!</p>
+        <div className="flex gap-3 text-3xl font-bold tracking-wide">
+          <span className="fishing-tap">Tap!</span>
+          <span className="fishing-tap">Tap!</span>
+          <span className="fishing-tap">Tap!</span>
+        </div>
+        <div className="h-2 w-52 bg-white/25">
+          <div
+            className="h-2 bg-white transition-[width] duration-75"
+            style={{ width: `${reelProgress * 100}%` }}
+          />
+        </div>
+        <p className="text-sm text-white/80">
+          {shownReels} / {need}
+        </p>
+      </button>
     );
   }
 
   return (
-    <div className="flex w-full flex-col items-center gap-4">
+    <div
+      className="flex w-full flex-col items-center gap-4"
+      onPointerDown={() => {
+        if (fishing && hovering && !capturingMotion) hook();
+      }}
+    >
       {round.phase === "over" ? (
         <>
           <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
@@ -247,29 +268,26 @@ export function FishingPad({
             />
           </div>
 
-          <button
-            type="button"
-            onPointerDown={(event) => {
-              event.preventDefault();
-              hook();
-            }}
-            disabled={!hovering || capturingMotion}
-            className="h-16 w-full text-[17px] font-medium text-white disabled:bg-black/15 disabled:text-black/35"
+          <p
+            className="flex h-16 w-full items-center justify-center text-[17px] font-medium"
             style={{
               background: hovering ? accent : undefined,
-              touchAction: "none",
+              color: hovering ? "#ffffff" : "rgba(0, 0, 0, 0.35)",
             }}
           >
             {hovering
-              ? `Hook · ${KIND_LABEL[hovering.kind]}`
+              ? `Tap anywhere to hook · ${KIND_LABEL[hovering.kind]}`
               : "Hover a fish to hook"}
-          </button>
+          </p>
           <p className="text-center text-sm text-black/55">
             Small 1pt · medium 2 · large 3. Everyone fishes at once.
           </p>
           <button
             type="button"
-            onClick={ready}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              ready();
+            }}
             className="text-xs text-black/40 underline"
           >
             Re-centre the hook
