@@ -2,17 +2,20 @@
 
 import type { Player } from "@/lib/protocol";
 import { currentId, liveCups, teamName, type Match } from "./rules";
+import type { LastThrowInfo } from "./TestPanel";
 
 export function TurnHud({
   match,
   controllers,
   testing,
   shooterCalibrated,
+  lastThrow,
 }: {
   match: Match;
   controllers: Player[];
   testing: boolean;
   shooterCalibrated: boolean;
+  lastThrow: LastThrowInfo | null;
 }) {
   const shooterId = currentId(match);
   const shooter = controllers.find((player) => player.id === shooterId);
@@ -33,7 +36,14 @@ export function TurnHud({
     detail = joined === 1 ? "1 of 2 phones in. Join one more." : "Need 2 phones to start";
   } else if (match.phase === "flight") {
     title = shooter?.name ?? "Throw";
-    detail = "Ball in the air";
+    detail =
+      lastThrow?.result === "sink" || (lastThrow?.result === "bounce" && lastThrow.cupId)
+        ? "In the cup"
+        : lastThrow?.result === "bounce"
+          ? "On the table"
+          : lastThrow?.result === "miss"
+            ? "Miss"
+            : "Ball in the air";
   } else if (match.phase === "over") {
     title = match.message;
     detail = "Next game in a few seconds";

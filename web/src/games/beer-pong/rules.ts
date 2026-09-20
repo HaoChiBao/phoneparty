@@ -22,7 +22,7 @@ export type Match = {
 export function emptyMatch(): Match {
   return {
     phase: "waiting",
-    cups: placeRacks(10),
+    cups: placeRacks(),
     order: [],
     teamOf: {},
     turnIndex: 0,
@@ -116,7 +116,7 @@ export function startMatch(controllers: Player[], previousTeams: Record<string, 
   const next: Match = {
     ...emptyMatch(),
     phase: "aim",
-    cups: placeRacks(10),
+    cups: placeRacks(),
     order,
     teamOf,
     turnIndex: 0,
@@ -334,7 +334,7 @@ export function syncTestPlayers(match: Match, controllers: Player[]): Match {
   }
   const teamOf = assignTeams(controllers, match.teamOf);
   const order = buildOrder(controllers, teamOf);
-  const cups = match.phase === "waiting" ? placeRacks(10) : match.cups;
+  const cups = match.phase === "waiting" ? placeRacks() : match.cups;
   return {
     ...match,
     phase: match.phase === "waiting" || match.phase === "over" ? "aim" : match.phase,
@@ -366,7 +366,7 @@ export function applyTestSink(match: Match, cupId: string, bounce: boolean): Mat
 export function refillCups(match: Match): Match {
   return {
     ...match,
-    cups: placeRacks(10),
+    cups: placeRacks(),
     phase: match.phase === "flight" ? "aim" : match.phase === "over" ? "aim" : match.phase,
     redemption: null,
     winner: null,

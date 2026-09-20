@@ -3,6 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import type { Player } from "@/lib/protocol";
 import { BELL_SCORE, scoreHeight, type SwingRecord } from "./logic";
 
@@ -47,7 +48,7 @@ export function Tower({
   const mallet = useRef<THREE.Group>(null);
   const bell = useRef<THREE.Group>(null);
   const ring = useRef<THREE.Mesh>(null);
-  const ringMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const ringMaterial = useRef<THREE.MeshStandardMaterial>(null);
   const anim = useRef<{ startedAt: number; score: number; rise: number } | null>(
     null,
   );
@@ -132,17 +133,17 @@ export function Tower({
       {/* plinth */}
       <mesh position={[0, 0.35, 0]}>
         <boxGeometry args={[2.8, 0.7, 1.8]} />
-        <meshStandardMaterial color="#111111" />
+        <MatteMaterial color="#3a3a3a" />
       </mesh>
       <mesh position={[0, 0.72, 0]}>
         <boxGeometry args={[2.9, 0.06, 1.9]} />
-        <meshStandardMaterial color={accent} />
+        <MatteMaterial color={accent} />
       </mesh>
 
       {/* rail */}
       <mesh position={[0, 4, 0]}>
         <boxGeometry args={[0.95, 7, 0.3]} />
-        <meshStandardMaterial color="#111111" />
+        <MatteMaterial color="#3a3a3a" />
       </mesh>
       {ticks.map((fraction) => {
         const major = Math.round(fraction * 10) % 5 === 0;
@@ -152,7 +153,7 @@ export function Tower({
             position={[0, heightForScore(fraction * 100), 0.17]}
           >
             <boxGeometry args={[major ? 0.7 : 0.42, 0.035, 0.02]} />
-            <meshBasicMaterial color={major ? accent : "#ffffff"} />
+            <MatteMaterial color={major ? accent : "#ffffff"} />
           </mesh>
         );
       })}
@@ -160,32 +161,23 @@ export function Tower({
       {/* puck */}
       <mesh ref={puck} position={[0, BASE_Y, 0.26]}>
         <boxGeometry args={[0.86, 0.3, 0.34]} />
-        <meshStandardMaterial
-          color={puckColor}
-          emissive={puckColor}
-          emissiveIntensity={0.35}
-        />
+        <MatteMaterial color={puckColor} />
       </mesh>
 
       {/* bell */}
       <group ref={bell} position={[0, BELL_Y, 0]}>
         <mesh>
           <sphereGeometry args={[0.42, 24, 18, 0, Math.PI * 2, 0, Math.PI / 1.6]} />
-          <meshStandardMaterial
-            color={accent}
-            metalness={0.35}
-            roughness={0.3}
-            side={THREE.DoubleSide}
-          />
+          <MatteMaterial color={accent} side={THREE.DoubleSide} />
         </mesh>
         <mesh position={[0, 0.3, 0]}>
           <cylinderGeometry args={[0.05, 0.05, 0.3, 10]} />
-          <meshStandardMaterial color="#111111" />
+          <MatteMaterial color="#3a3a3a" />
         </mesh>
       </group>
       <mesh ref={ring} position={[0, BELL_Y, 0.3]} visible={false}>
         <ringGeometry args={[0.5, 0.6, 32]} />
-        <meshBasicMaterial
+        <MatteMaterial
           ref={ringMaterial}
           color={accent}
           transparent
@@ -205,11 +197,7 @@ export function Tower({
           >
             <mesh>
               <boxGeometry args={[0.5, 0.09, 0.16]} />
-              <meshStandardMaterial
-                color={player.color}
-                emissive={player.color}
-                emissiveIntensity={0.4}
-              />
+              <MatteMaterial color={player.color} />
             </mesh>
           </group>
         );
@@ -219,11 +207,11 @@ export function Tower({
       <group ref={mallet} position={[-2.1, 0.75, 0.9]} rotation={[0, 0, MALLET_REST]}>
         <mesh position={[0.62, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.07, 0.08, 1.25, 12]} />
-          <meshStandardMaterial color="#111111" />
+          <MatteMaterial color="#3a3a3a" />
         </mesh>
         <mesh position={[1.32, 0, 0]}>
           <boxGeometry args={[0.46, 0.46, 0.46]} />
-          <meshStandardMaterial color={puckColor} metalness={0.2} roughness={0.5} />
+          <MatteMaterial color={puckColor} />
         </mesh>
       </group>
     </group>

@@ -3,6 +3,7 @@
 import { Grid, PerspectiveCamera } from "@react-three/drei";
 import type { ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import type { GameSceneProps } from "@/games/types";
 import { useRoundState } from "./logic";
 import { SwingHint } from "./SwingHint";
@@ -18,10 +19,9 @@ function Stage({ children }: { children: ReactNode }) {
       <PerspectiveCamera makeDefault position={[0, 3.9, 12.4]} fov={50} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[4, 9, 6]} intensity={1.1} />
-      <pointLight position={[0, 8, 3]} intensity={12} color={ACCENT} distance={18} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[24, 20]} />
-        <meshStandardMaterial color="#ffffff" />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <Grid
         args={[24, 20]}

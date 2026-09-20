@@ -2,6 +2,7 @@
 
 import { Grid, PerspectiveCamera } from "@react-three/drei";
 import { HostCanvas } from "@/games/shared/HostCanvas";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import { Wand, wandsFromControllers } from "@/games/shared/Wand";
 import type { GameSceneProps } from "@/games/types";
 
@@ -20,7 +21,7 @@ export function SandboxScene({
       <directionalLight position={[2, 5, 3]} intensity={0.9} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[20, 20]} />
-        <meshStandardMaterial color="#ffffff" />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <Grid
         args={[20, 20]}

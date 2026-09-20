@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import { HostCanvas } from "@/games/shared/HostCanvas";
+import { MatteMaterial } from "@/games/shared/MatteMaterial";
 import type { Player } from "@/lib/protocol";
 import type { GameSceneProps } from "@/games/types";
 import { cameraPose } from "./camera";
@@ -30,11 +31,13 @@ import { createBall, stepBall, velocityToHit, type BallSim } from "./physics";
 import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 
 const REMATCH_MS = 7000;
+const REVEAL_MS = 2600;
 
-const TABLE_GREEN = "#178A3A";
-const TABLE_APRON = "#0C4A28";
-const SOLO_RED = "#E03C31";
-const SOLO_WHITE = "#F7F7F5";
+const TABLE_GREEN = "#2db85a";
+const TABLE_APRON = "#1a7a44";
+const CUP_ORANGE = "#EBA02A";
+const CUP_WHITE = "#ffffff";
+const GLOW = "#FFE27A";
 
 function Table() {
   const topY = TABLE.height - TABLE.thickness / 2;
@@ -60,67 +63,71 @@ function Table() {
     <group>
       <mesh position={[0, topY, 0]} receiveShadow>
         <boxGeometry args={[TABLE.length + 0.05, TABLE.thickness, TABLE.width + 0.05]} />
-        <meshStandardMaterial color={TABLE_APRON} roughness={0.65} />
+        <MatteMaterial color={TABLE_APRON} />
       </mesh>
       <mesh position={[0, surfaceY, 0]} receiveShadow>
         <boxGeometry args={[TABLE.length, 0.006, TABLE.width]} />
-        <meshStandardMaterial color={TABLE_GREEN} roughness={0.52} />
+        <MatteMaterial color={TABLE_GREEN} />
       </mesh>
       <mesh position={[0, lineY, playW / 2 - line / 2]}>
         <boxGeometry args={[playL, 0.003, line]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <mesh position={[0, lineY, -playW / 2 + line / 2]}>
         <boxGeometry args={[playL, 0.003, line]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <mesh position={[playL / 2 - line / 2, lineY, 0]}>
         <boxGeometry args={[line, 0.003, playW]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <mesh position={[-playL / 2 + line / 2, lineY, 0]}>
         <boxGeometry args={[line, 0.003, playW]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <mesh position={[0, lineY, 0]}>
         <boxGeometry args={[playL, 0.003, thin]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       <mesh position={[0, netY - 0.006, 0]}>
         <boxGeometry args={[0.01, netH - 0.012, playW - 0.03]} />
-        <meshStandardMaterial color="#1d1d1d" transparent opacity={0.55} roughness={0.85} />
+        <MatteMaterial color="#3a3a3a" transparent opacity={0.55} />
       </mesh>
       {[-0.045, -0.02, 0.005, 0.03, 0.055].map((y) => (
         <mesh key={y} position={[0, TABLE.height + netH / 2 + y, 0]}>
           <boxGeometry args={[0.012, 0.004, playW - 0.03]} />
-          <meshStandardMaterial color="#ececec" roughness={0.4} />
+          <MatteMaterial color="#f2f2f2" />
         </mesh>
       ))}
       <mesh position={[0, TABLE.height + netH - 0.005, 0]}>
         <boxGeometry args={[0.016, 0.014, playW - 0.012]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.28} />
+        <MatteMaterial color="#ffffff" />
       </mesh>
       {([-playW / 2 + 0.01, playW / 2 - 0.01] as const).map((z) => (
         <mesh key={z} position={[0, netY, z]}>
           <cylinderGeometry args={[0.012, 0.012, netH + 0.02, 12]} />
-          <meshStandardMaterial color="#d0d0d0" metalness={0.4} roughness={0.35} />
+          <MatteMaterial color="#e0e0e0" />
         </mesh>
       ))}
       {legs.map(([x, z]) => (
         <mesh key={`${x}:${z}`} position={[x, TABLE.height / 2 - TABLE.thickness / 2, z]}>
           <boxGeometry args={[leg, TABLE.height - TABLE.thickness, leg]} />
-          <meshStandardMaterial color="#1a1a1a" roughness={0.55} />
+          <MatteMaterial color="#3a3a3a" />
         </mesh>
       ))}
     </group>
   );
 }
 
-function cupRadiusAt(t: number) {
-  return CUP.baseRadius + (CUP.rimRadius - CUP.baseRadius) * t;
-}
-
-function CupMesh({ cup }: { cup: CupSlot }) {
+function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
+  const light = useRef<THREE.PointLight>(null);
+  const beams = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (!glowing || !cup.live) return;
+    const pulse = 0.7 + Math.sin(clock.elapsedTime * 11) * 0.3;
+    if (light.current) light.current.intensity = 2.8 + pulse * 2.4;
+    if (beams.current) beams.current.position.y = pulse * 0.03;
+  });
   if (!cup.live) return null;
   const h = CUP.height;
   const innerRim = CUP.rimRadius - 0.0026;
@@ -129,33 +136,84 @@ function CupMesh({ cup }: { cup: CupSlot }) {
     <group position={[cup.x, TABLE.height + h / 2, cup.z]}>
       <mesh>
         <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, h, 28, 1, true]} />
-        <meshStandardMaterial color={SOLO_RED} roughness={0.36} />
+        <meshStandardMaterial
+          color={CUP_ORANGE}
+          roughness={0.36}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.6 : 0}
+        />
       </mesh>
       <mesh>
         <cylinderGeometry args={[innerRim, innerBase, h - 0.004, 28, 1, true]} />
-        <meshStandardMaterial color={SOLO_WHITE} side={THREE.BackSide} roughness={0.18} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          side={THREE.BackSide}
+          roughness={0.18}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 2.1 : 0}
+        />
       </mesh>
       <mesh position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[CUP.baseRadius, 24]} />
-        <meshStandardMaterial color={SOLO_RED} roughness={0.36} />
+        <meshStandardMaterial
+          color={CUP_ORANGE}
+          roughness={0.36}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.2 : 0}
+        />
       </mesh>
       <mesh position={[0, -h / 2 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[innerBase, 24]} />
-        <meshStandardMaterial color={SOLO_WHITE} roughness={0.18} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          roughness={0.18}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 2.4 : 0}
+        />
       </mesh>
       <mesh position={[0, h / 2 - 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[innerRim - 0.001, CUP.rimRadius + 0.003, 28]} />
-        <meshStandardMaterial color={SOLO_WHITE} roughness={0.2} />
+        <meshStandardMaterial
+          color={CUP_WHITE}
+          roughness={0.2}
+          emissive={glowing ? GLOW : "#000000"}
+          emissiveIntensity={glowing ? 1.8 : 0}
+        />
       </mesh>
-      {[0.78, 0.64].map((t) => {
-        const r = cupRadiusAt(t);
-        return (
-          <mesh key={t} position={[0, -h / 2 + h * t, 0]}>
-            <cylinderGeometry args={[r + 0.0009, r + 0.0007, 0.007, 28, 1, true]} />
-            <meshStandardMaterial color={SOLO_WHITE} roughness={0.22} />
-          </mesh>
-        );
-      })}
+      {glowing ? (
+        <>
+          <pointLight ref={light} color={GLOW} intensity={5.4} distance={3.4} position={[0, 0.18, 0]} />
+          <pointLight color="#fff4b8" intensity={2.2} distance={1.6} position={[0, 0.55, 0]} />
+          <spotLight
+            color={GLOW}
+            intensity={6.5}
+            distance={3.2}
+            angle={0.55}
+            penumbra={0.45}
+            position={[0, 0.02, 0]}
+          >
+            <object3D attach="target" position={[0, 1.4, 0]} />
+          </spotLight>
+          <group ref={beams} position={[0, h / 2, 0]}>
+            <mesh>
+              <cylinderGeometry args={[0.012, 0.068, 0.92, 14, 1, true]} />
+              <meshBasicMaterial color={GLOW} transparent opacity={0.48} side={THREE.DoubleSide} />
+            </mesh>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <mesh key={i} rotation={[0.28, (i / 8) * Math.PI * 2, 0]} position={[0, 0.34, 0]}>
+                <coneGeometry args={[0.018, 0.78, 8, 1, true]} />
+                <meshBasicMaterial color="#fff4b0" transparent opacity={0.38} side={THREE.DoubleSide} />
+              </mesh>
+            ))}
+            {[0.16, 0.38, 0.6, 0.82].map((y) => (
+              <mesh key={y} position={[0.01, y, 0.01]}>
+                <sphereGeometry args={[0.014, 10, 10]} />
+                <meshBasicMaterial color="#fff8d2" />
+              </mesh>
+            ))}
+          </group>
+        </>
+      ) : null}
     </group>
   );
 }
@@ -175,9 +233,24 @@ function BallMesh({ ballRef }: { ballRef: RefObject<BallSim | null> }) {
   return (
     <mesh ref={mesh} visible={false}>
       <sphereGeometry args={[BALL.radius, 24, 24]} />
-      <meshStandardMaterial color="#f6f6f6" roughness={0.35} />
+      <MatteMaterial color="#ffffff" />
     </mesh>
   );
+}
+
+function applyLanding(
+  match: Match,
+  controllers: Player[],
+  tester: boolean,
+  sunkId: string | null,
+  bounced: boolean,
+): Match {
+  if (tester) {
+    return sunkId
+      ? applyTestSink(match, sunkId, bounced)
+      : { ...match, phase: "aim" as const, message: "Test. Throw anytime." };
+  }
+  return sunkId ? applySink(match, controllers, sunkId, bounced) : applyMiss(match, controllers);
 }
 
 function GameLoop({
@@ -188,6 +261,7 @@ function GameLoop({
   lastRef,
   setMatch,
   setLastThrow,
+  setGlowCup,
 }: {
   matchRef: MutableRefObject<Match>;
   ballRef: MutableRefObject<BallSim | null>;
@@ -196,31 +270,51 @@ function GameLoop({
   lastRef: MutableRefObject<LastThrowInfo | null>;
   setMatch: (next: Match) => void;
   setLastThrow: (next: LastThrowInfo) => void;
+  setGlowCup: (id: string | null) => void;
 }) {
-  const resolving = useRef(false);
+  const pending = useRef<{ sunkId: string | null; bounced: boolean } | null>(null);
+  const revealAt = useRef(0);
   useFrame((_, dt) => {
+    if (pending.current) {
+      if (matchRef.current.phase !== "flight") {
+        pending.current = null;
+        setGlowCup(null);
+        return;
+      }
+      if (Date.now() < revealAt.current) return;
+      const landed = pending.current;
+      pending.current = null;
+      setGlowCup(null);
+      ballRef.current = null;
+      setMatch(
+        applyLanding(
+          matchRef.current,
+          controllersRef.current,
+          testRef.current,
+          landed.sunkId,
+          landed.bounced,
+        ),
+      );
+      return;
+    }
     const ball = ballRef.current;
-    if (!ball || ball.settled || resolving.current) return;
+    if (!ball || ball.settled) return;
     stepBall(ball, matchRef.current.cups, dt);
     if (!ball.settled) return;
-    resolving.current = true;
-    const match = matchRef.current;
-    const controllers = controllersRef.current;
-    const result = ball.sunkId ? (ball.bounced ? "bounce" : "sink") : "miss";
+    const result = ball.sunkId
+      ? ball.bounced
+        ? "bounce"
+        : "sink"
+      : ball.bounced
+        ? "bounce"
+        : "miss";
     const prev = lastRef.current;
     if (prev && prev.result === "air") {
       setLastThrow({ ...prev, result, cupId: ball.sunkId ?? undefined });
     }
-    const next = testRef.current
-      ? ball.sunkId
-        ? applyTestSink(match, ball.sunkId, ball.bounced)
-        : { ...match, phase: "aim" as const, message: "Test. Throw anytime." }
-      : ball.sunkId
-        ? applySink(match, controllers, ball.sunkId, ball.bounced)
-        : applyMiss(match, controllers);
-    ballRef.current = null;
-    setMatch(next);
-    resolving.current = false;
+    pending.current = { sunkId: ball.sunkId, bounced: ball.bounced };
+    revealAt.current = Date.now() + REVEAL_MS;
+    setGlowCup(ball.sunkId);
   });
   return null;
 }
@@ -240,7 +334,7 @@ function TurnCamera({ team, phase }: { team: TeamId | null; phase: Phase }) {
     camera.lookAt(look.current);
   });
 
-  return <PerspectiveCamera makeDefault position={[0, 2.25, 3.7]} fov={46} />;
+  return <PerspectiveCamera makeDefault position={[0, 2.45, 1.55]} fov={40} />;
 }
 
 function rosterKey(controllers: Player[]) {
@@ -265,6 +359,7 @@ export function BeerPongScene({
   const [focusId, setFocusId] = useState<string | null>(null);
   const [aimSnap, setAimSnap] = useState<ThrowReadout | null>(null);
   const [lastThrow, setLastThrow] = useState<LastThrowInfo | null>(null);
+  const [glowCup, setGlowCup] = useState<string | null>(null);
   const matchRef = useRef(match);
   matchRef.current = match;
   const ballRef = useRef<BallSim | null>(null);
@@ -336,6 +431,7 @@ export function BeerPongScene({
       }
       if (action.type === "resetCups") {
         ballRef.current = null;
+        setGlowCup(null);
         setMatch(refillCups(matchRef.current));
         continue;
       }
@@ -405,11 +501,11 @@ export function BeerPongScene({
         <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
           <planeGeometry args={[14, 12]} />
-          <meshStandardMaterial color="#ffffff" />
+          <MatteMaterial color="#ffffff" />
         </mesh>
         <Table />
         {match.cups.map((cup) => (
-          <CupMesh key={cup.id} cup={cup} />
+          <CupMesh key={cup.id} cup={cup} glowing={cup.id === glowCup} />
         ))}
         <BallMesh ballRef={ballRef} />
         <GameLoop
@@ -420,6 +516,7 @@ export function BeerPongScene({
           lastRef={lastRef}
           setMatch={setMatch}
           setLastThrow={setLastThrow}
+          setGlowCup={setGlowCup}
         />
       </HostCanvas>
       <TestPanel
@@ -436,6 +533,7 @@ export function BeerPongScene({
         onResetTune={() => setTune(DEFAULT_TUNE)}
         onResetCups={() => {
           ballRef.current = null;
+          setGlowCup(null);
           setMatch(refillCups(matchRef.current));
         }}
         lastThrow={lastThrow}
@@ -445,6 +543,7 @@ export function BeerPongScene({
         controllers={controllers}
         testing={testing}
         shooterCalibrated={Boolean(shooter && calibByPlayer[shooter])}
+        lastThrow={lastThrow}
       />
     </>
   );
