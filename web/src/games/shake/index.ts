@@ -13,4 +13,5 @@ export const shakeGame: GameDefinition = {
   motionLabels: [{ id: "shake", title: "bear shake" }],
   howToPlay:
     "Scan the QR and enable motion. Hold the phone flat with the camera facing the ground, grab a trunk, and shake. Thirty seconds, most apples wins.",
+  advanced: true,
 };

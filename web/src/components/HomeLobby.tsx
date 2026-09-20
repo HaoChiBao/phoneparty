@@ -2,20 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { listGames } from "@/games/catalog";
+import { listAdvancedGames, listFeaturedGames } from "@/games/catalog";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
 import { createRoom } from "@/lib/realtime";
 
 export function HomeLobby() {
   const router = useRouter();
   const [entered, setEntered] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [code, setCode] = useState("");
   const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const games = listGames().filter(
-    (game) => game.id !== "range" && game.id !== "sandbox",
-  );
+  const games = listFeaturedGames();
+  const advanced = listAdvancedGames();
 
   async function hostParty() {
     setBusy(true);
@@ -106,8 +106,8 @@ export function HomeLobby() {
                   onClick={() => setGameId(game.id)}
                   className={
                     selected
-                      ? "border border-accent bg-accent px-4 py-3 text-left text-white"
-                      : "border border-black/15 bg-white px-4 py-3 text-left"
+                      ? "rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
+                      : "rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
                   }
                 >
                   <span className="block text-[15px] font-medium">{game.title}</span>
@@ -119,6 +119,56 @@ export function HomeLobby() {
                 </button>
               );
             })}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((open) => !open)}
+                className={
+                  advanced.some((game) => game.id === gameId)
+                    ? "flex w-full items-center justify-between rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
+                    : "flex w-full items-center justify-between rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
+                }
+              >
+                <span className="text-[15px] font-medium">Advanced</span>
+                <span
+                  className={`text-[11px] uppercase tracking-[0.18em] ${
+                    advanced.some((game) => game.id === gameId)
+                      ? "text-white/80"
+                      : "text-black/45"
+                  }`}
+                >
+                  {showAdvanced ? "Hide" : "Show"}
+                </span>
+              </button>
+              {showAdvanced ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  {advanced.map((game) => {
+                    const selected = game.id === gameId;
+                    return (
+                      <button
+                        key={game.id}
+                        type="button"
+                        onClick={() => setGameId(game.id)}
+                        className={
+                          selected
+                            ? "rounded-xl border border-accent bg-accent px-4 py-3 text-left text-white"
+                            : "rounded-xl border border-black/15 bg-white px-4 py-3 text-left"
+                        }
+                      >
+                        <span className="block text-[15px] font-medium">
+                          {game.title}
+                        </span>
+                        <span
+                          className={`mt-1 block text-sm ${selected ? "text-white/80" : "text-black/50"}`}
+                        >
+                          {game.blurb}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-3">

@@ -51,6 +51,8 @@ export type GameDefinition = {
   motionLabels?: MotionLabel[];
   // Phone how-to copy. Shown on the controller when the game opens.
   howToPlay?: string;
+  // Hidden under the Advanced picker on the lobby and TV.
+  advanced?: boolean;
 };
 
 export function motionLabelsFor(game: GameDefinition): MotionLabel[] {

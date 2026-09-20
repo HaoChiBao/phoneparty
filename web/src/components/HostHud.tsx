@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { listGames } from "@/games/catalog";
+import { listAdvancedGames, listFeaturedGames, listGames } from "@/games/catalog";
 import type { GyroSample, Player } from "@/lib/protocol";
 
 export function HostHud({
@@ -27,15 +27,21 @@ export function HostHud({
   onKick: (playerId: string) => void;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
-  const games = listGames().filter(
-    (game) => game.id !== "range" && game.id !== "sandbox",
-  );
+  const featured = listFeaturedGames();
+  const advanced = listAdvancedGames();
+  const games = listGames();
   const currentGame = games.find((game) => game.id === gameId);
+  const advancedSelected = advanced.some((game) => game.id === gameId);
   const [open, setOpen] = useState(true);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (controllers.length >= 2) setOpen(false);
   }, [controllers.length]);
+
+  useEffect(() => {
+    if (advancedSelected) setAdvancedOpen(true);
+  }, [advancedSelected]);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-5">
@@ -65,8 +71,8 @@ export function HostHud({
                 {connected ? "Realtime connected" : "Connecting…"}
                 {error ? ` · ${error}` : ""}
               </p>
-              <div className="pointer-events-auto mt-3 flex flex-wrap gap-2">
-                {games.map((game) => {
+              <div className="pointer-events-auto mt-3 flex flex-wrap items-center gap-2">
+                {featured.map((game) => {
                   const selected = game.id === gameId;
                   return (
                     <button
@@ -83,6 +89,40 @@ export function HostHud({
                     </button>
                   );
                 })}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedOpen((value) => !value)}
+                    className={
+                      advancedSelected
+                        ? "rounded-lg bg-accent px-2 py-1 text-xs text-white"
+                        : "rounded-lg border border-black/20 bg-white px-2 py-1 text-xs"
+                    }
+                  >
+                    Advanced {advancedOpen ? "▴" : "▾"}
+                  </button>
+                  {advancedOpen ? (
+                    <div className="absolute left-0 top-full z-20 mt-1 flex min-w-[8.5rem] flex-col gap-1 rounded-xl bg-white p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+                      {advanced.map((game) => {
+                        const selected = game.id === gameId;
+                        return (
+                          <button
+                            key={game.id}
+                            type="button"
+                            onClick={() => onSelectGame(game.id)}
+                            className={
+                              selected
+                                ? "rounded-lg bg-accent px-2 py-1 text-left text-xs text-white"
+                                : "rounded-lg px-2 py-1 text-left text-xs"
+                            }
+                          >
+                            {game.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="pointer-events-auto overflow-hidden rounded-2xl border border-black bg-white p-3">
