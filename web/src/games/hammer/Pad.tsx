@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { GamePadProps } from "@/games/types";
 import { useRoundState } from "./logic";
 import { SwingHint } from "./SwingHint";
@@ -25,8 +25,12 @@ export function HammerPad({
   const myTurn = Boolean(selfId) && round.current?.id === selfId;
   const aimedDown = isAimedDown(sample);
 
+  // Kept on the phone only, to make the thresholds in SWING tunable by feel.
+  const [lastPeak, setLastPeak] = useState<number | null>(null);
+
   const onSwing = useCallback(
-    (power: number) => {
+    (power: number, peak: number) => {
+      setLastPeak(peak);
       sendAction("swing", { power });
     },
     [sendAction],
@@ -41,7 +45,7 @@ export function HammerPad({
   const status = !aimedDown
     ? "Lay the phone flat, camera facing the floor"
     : phase === "ready"
-      ? "Ready — swing down!"
+      ? "Ready — drive it straight down!"
       : phase === "capturing"
         ? "Swinging…"
         : "Hold it still…";
@@ -79,6 +83,11 @@ export function HammerPad({
             Your swing
           </p>
           <p className="text-6xl font-bold tracking-tight">{mySwing.score}</p>
+          {lastPeak !== null ? (
+            <p className="text-xs tracking-wide text-black/35">
+              peak {lastPeak.toFixed(1)} m/s² down
+            </p>
+          ) : null}
           <p className="text-center text-sm text-black/55">
             {round.current
               ? `${round.current.name} is up next.`
@@ -94,6 +103,9 @@ export function HammerPad({
             Your turn
           </p>
           <SwingHint size={172} accent={accent} />
+          <p className="max-w-[15rem] text-center text-sm leading-5 text-black/55">
+            Keep it flat and push it straight down — tilting does not count.
+          </p>
           <p
             className="text-center text-[15px] font-medium"
             style={{ color: aimedDown ? accent : "#111111" }}

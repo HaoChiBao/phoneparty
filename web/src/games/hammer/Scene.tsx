@@ -105,7 +105,7 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
                 <SwingHint size={128} accent={activeColor} />
                 <p className="max-w-[16rem] text-left text-sm leading-5 text-black/60">
                   Hold the phone flat with the camera facing the floor, keep it
-                  still, then swing straight down.
+                  still, then drive it straight down. Tilting does not count.
                 </p>
               </div>
             </>

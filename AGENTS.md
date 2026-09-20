@@ -12,7 +12,7 @@ This file is the source of truth for agents working in this repo. `web/AGENTS.md
 - After **Enable motion**, the phone streams orientation and position into the room. **Calibrate at the TV** zeros relative aim and position.
 - On a computer, dragging the on-screen remote aims and sets X/Y so the session can be tested without a phone.
 
-Shipped games live in `web/src/games/`. **Hammer** is the carnival high striker: players take turns, hold the phone flat with the rear camera at the floor, and swing it down — peak acceleration launches a puck up the tower and the highest score wins. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Beer pong** is turn-based throws at a 3D cup rack. **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
+Shipped games live in `web/src/games/`. **Hammer** is the carnival high striker: players take turns, hold the phone flat with the rear camera at the floor, and drive it straight down — the peak DOWNWARD acceleration (device -Z, so a tilt or a shake scores nothing) launches a puck up the tower, and the highest score wins. **Range** is the test arena (floor grid, back wall, three ring targets, one wand per phone). **Beer pong** is turn-based throws at a 3D cup rack. **Sandbox** is an empty floor for starting a new title. All games share the same room, session, and controller pipeline.
 
 ## Repo
 

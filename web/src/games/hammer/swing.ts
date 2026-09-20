@@ -11,15 +11,17 @@ export const SWING = {
   // of accelerationIncludingGravity, but agree on orientation angles.
   aimBetaMax: 45,
   aimGammaMax: 45,
-  stillMax: 3.5, // m/s^2 that still counts as holding the hammer steady
+  stillMax: 3.5, // m/s^2 in any direction that counts as holding still
   stillMs: 280,
-  startMag: 12, // m/s^2 that opens a capture window
-  captureMs: 500,
-  minPeak: 12, // maps to power 0
-  maxPeak: 45, // maps to power 1
+  startDown: 8, // m/s^2 STRAIGHT DOWN that opens a capture window
+  captureMs: 450,
+  minDown: 8, // peak downward m/s^2 that maps to power 0
+  maxDown: 35, // peak downward m/s^2 that maps to power 1
 } as const;
 
 export type SwingPhase = "idle" | "aim" | "steady" | "ready" | "capturing";
+
+type Vec3 = { x: number; y: number; z: number };
 
 export function isAimedDown(sample: GyroSample | null) {
   if (!sample) return false;
@@ -30,11 +32,32 @@ export function isAimedDown(sample: GyroSample | null) {
 }
 
 export function peakToPower(peak: number) {
-  const span = SWING.maxPeak - SWING.minPeak;
-  return Math.min(Math.max((peak - SWING.minPeak) / span, 0), 1);
+  const span = SWING.maxDown - SWING.minDown;
+  return Math.min(Math.max((peak - SWING.minDown) / span, 0), 1);
 }
 
-type Vec3 = { x: number; y: number; z: number };
+/**
+ * Downward acceleration in m/s^2, from the device frame. Z points out of the
+ * screen, so with the phone flat it points at the sky and a downward drive
+ * reads as negative Z. Safari and Chrome disagree on the sign of the reported
+ * frame, so `sign` is measured per device rather than assumed — see
+ * readGravitySign. Upward motion (the lift, or the stop at the bottom) comes
+ * back negative and is ignored by the caller.
+ */
+export function downwardAccel(accel: Vec3, sign: number) {
+  return -sign * accel.z;
+}
+
+/**
+ * +1 where a flat, still phone reports +1g on Z (the spec, and Chrome), -1
+ * where it reports -1g (Safari). Only trust it while the phone is near still,
+ * when gravity dominates the reading; otherwise keep the last known value.
+ */
+export function readGravitySign(event: DeviceMotionEvent, current: number) {
+  const z = event.accelerationIncludingGravity?.z;
+  if (typeof z !== "number" || Math.abs(z) < 5) return current;
+  return z > 0 ? 1 : -1;
+}
 
 /** Linear acceleration, with a low-passed gravity estimate where a device only
  *  reports accelerationIncludingGravity. */
@@ -80,6 +103,7 @@ export function useSwingDetector({
   const stillSince = useRef(0);
   const capture = useRef({ startedAt: 0, peak: 0 });
   const gravity = useRef<Vec3>({ x: 0, y: 0, z: 0 });
+  const gravitySign = useRef(1);
 
   useEffect(() => {
     aimedRef.current = aimedDown;
@@ -106,10 +130,14 @@ export function useSwingDetector({
       const accel = readAccel(event, gravity.current);
       if (!accel) return;
       const mag = magnitude(accel);
+      const down = downwardAccel(accel, gravitySign.current);
       const now = Date.now();
 
       if (phaseRef.current === "capturing") {
-        capture.current.peak = Math.max(capture.current.peak, mag);
+        // Only the downward drive counts. Tilting the phone swings its Z axis
+        // away from the floor, and the lift and the stop both read negative,
+        // so none of them can pad the score.
+        capture.current.peak = Math.max(capture.current.peak, down);
         if (now - capture.current.startedAt < SWING.captureMs) return;
         const peak = capture.current.peak;
         toPhase("idle");
@@ -123,13 +151,16 @@ export function useSwingDetector({
         return;
       }
 
-      if (phaseRef.current === "ready" && mag >= SWING.startMag) {
-        capture.current = { startedAt: now, peak: mag };
+      if (phaseRef.current === "ready" && down >= SWING.startDown) {
+        capture.current = { startedAt: now, peak: down };
         toPhase("capturing");
         return;
       }
 
       if (mag < SWING.stillMax) {
+        // Flat and still: gravity dominates, so this is when the device's sign
+        // convention can be read.
+        gravitySign.current = readGravitySign(event, gravitySign.current);
         if (!stillSince.current) stillSince.current = now;
         toPhase(now - stillSince.current >= SWING.stillMs ? "ready" : "steady");
         return;
