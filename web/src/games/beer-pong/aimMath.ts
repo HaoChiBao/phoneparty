@@ -27,6 +27,7 @@ export function createAimScratch() {
     origin: new THREE.Vector3(),
     direction: new THREE.Vector3(),
     hit: new THREE.Vector3(),
+    offset: new THREE.Vector3(),
     euler: new THREE.Euler(),
   };
 }
@@ -38,13 +39,9 @@ export function computeAim(
   calib: CalibratedPose | null,
   tune: ThrowTune,
   scratch: AimScratch,
+  view?: { position: THREE.Vector3; quaternion: THREE.Quaternion },
 ): AimReadout {
   setRelativeQuaternion(scratch.quaternion, sample, calib, scratch.calibQ);
-  scratch.origin.set(
-    sample.x * ORIGIN_X * tune.posGain,
-    ORIGIN_Y + sample.y * ORIGIN_Y_SCALE * tune.posGain,
-    ORIGIN_Z + sample.z * ORIGIN_Z_SCALE * tune.posGain,
-  );
   scratch.direction
     .set(0, -tune.tilt, -1)
     .normalize()
@@ -52,6 +49,23 @@ export function computeAim(
   scratch.direction.x *= tune.aimGain;
   scratch.direction.z *= tune.aimGain;
   scratch.direction.normalize();
+  if (view) {
+    scratch.direction.applyQuaternion(view.quaternion);
+    scratch.origin.copy(view.position);
+    scratch.offset.set(
+      sample.x * ORIGIN_X * tune.posGain,
+      sample.y * ORIGIN_Y_SCALE * tune.posGain,
+      sample.z * ORIGIN_Z_SCALE * tune.posGain,
+    );
+    scratch.offset.applyQuaternion(view.quaternion);
+    scratch.origin.add(scratch.offset);
+  } else {
+    scratch.origin.set(
+      sample.x * ORIGIN_X * tune.posGain,
+      ORIGIN_Y + sample.y * ORIGIN_Y_SCALE * tune.posGain,
+      ORIGIN_Z + sample.z * ORIGIN_Z_SCALE * tune.posGain,
+    );
+  }
   aimOnTable(scratch.origin, scratch.direction, scratch.hit);
   scratch.hit.x = THREE.MathUtils.clamp(
     scratch.hit.x,

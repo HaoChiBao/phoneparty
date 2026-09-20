@@ -1,10 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { GamePadProps } from "@/games/types";
+import { createFlickState, readFlickAccel, stepFlick, swipeFlick } from "./flick";
 
 export function BeerPongPad({ sendAction, sample }: GamePadProps) {
   const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState("Aim at the cups, then flick.");
+  const flick = useRef(createFlickState());
+  const swipe = useRef<{ y: number; t: number } | null>(null);
+  const sendRef = useRef(sendAction);
+  sendRef.current = sendAction;
+
+  function fire(power: number, peak: number) {
+    sendRef.current("throw", { power, peak });
+    setStatus(`Flick ${peak.toFixed(0)} · power ${power.toFixed(2)}`);
+  }
+
+  useEffect(() => {
+    const onMotion = (event: DeviceMotionEvent) => {
+      const accel = readFlickAccel(event);
+      if (!accel) return;
+      const result = stepFlick(flick.current, accel, Date.now());
+      if (result) fire(result.power, result.peak);
+    };
+    window.addEventListener("devicemotion", onMotion, true);
+    return () => window.removeEventListener("devicemotion", onMotion, true);
+  }, []);
+
+  function onPointerDown(event: PointerEvent<HTMLDivElement>) {
+    swipe.current = { y: event.clientY, t: Date.now() };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Desktop automation and some browsers skip capture.
+    }
+  }
+
+  function onPointerUp(event: PointerEvent<HTMLDivElement>) {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start) return;
+    const result = swipeFlick(start.y, event.clientY, start.t, Date.now());
+    if (result) fire(result.power, result.peak);
+  }
 
   function toggleTest() {
     const next = !testing;
@@ -14,13 +53,23 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
 
   return (
     <div className="flex w-full max-w-xs flex-col gap-2">
-      <button
-        type="button"
-        onClick={() => sendAction("throw")}
-        className="h-14 bg-accent text-[15px] font-medium text-white"
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Flick to throw"
+        className="flex h-36 touch-none flex-col items-center justify-center bg-accent px-4 text-white"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          swipe.current = null;
+        }}
       >
-        Throw
-      </button>
+        <p className="text-lg font-medium">Flick</p>
+        <p className="mt-1 text-center text-xs leading-4 text-white/80">
+          Throw with the phone, or swipe up here.
+        </p>
+      </div>
+      <p className="text-center text-xs leading-4 text-black/45">{status}</p>
       <button
         type="button"
         onClick={toggleTest}
@@ -41,9 +90,6 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
           >
             Reset cups
           </button>
-          <p className="text-center text-xs leading-4 text-black/45">
-            Free throw. Watch the TV for aim math and sliders.
-          </p>
           {sample ? (
             <p className="text-center font-mono text-[11px] text-black/55">
               α {sample.alpha.toFixed(1)} β {sample.beta.toFixed(1)} γ {sample.gamma.toFixed(1)}
@@ -52,11 +98,7 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
             </p>
           ) : null}
         </>
-      ) : (
-        <p className="text-center text-xs leading-4 text-black/45">
-          Point at the far cups on the TV. Throw on your turn.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

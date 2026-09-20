@@ -1,14 +1,15 @@
 "use client";
 
 import { PerspectiveCamera } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import { HostCanvas } from "@/games/shared/HostCanvas";
-import type { CalibratedPose, GameActionState, GyroSample, Player } from "@/lib/protocol";
+import type { CalibratedPose, GyroSample, Player } from "@/lib/protocol";
 import type { GameSceneProps } from "@/games/types";
 import { computeAim, createAimScratch, snapshotAim, type AimSnapshot } from "./aimMath";
-import { BALL, CUP, TABLE, launchPoint, liveCups, type CupSlot, type TeamId } from "./layout";
+import { cameraPose } from "./camera";
+import { BALL, CUP, TABLE, launchPoint, type CupSlot, type TeamId } from "./layout";
 import {
   applyMiss,
   applySink,
@@ -20,10 +21,11 @@ import {
   rematch,
   syncPlayers,
   syncTestPlayers,
-  teamName,
   type Match,
+  type Phase,
 } from "./rules";
 import { TestPanel, type LastThrowInfo } from "./TestPanel";
+import { TurnHud } from "./TurnHud";
 import { createBall, stepBall, targetFromAim, velocityToHit, type BallSim } from "./physics";
 import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 
@@ -129,6 +131,7 @@ function AimPointer({
   const mid = useMemo(() => new THREE.Vector3(), []);
   const along = useMemo(() => new THREE.Vector3(), []);
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  const { camera } = useThree();
 
   useFrame(() => {
     if (!group.current || !sample) return;
@@ -147,6 +150,7 @@ function AimPointer({
       calib ?? firstPose.current,
       tuneRef.current,
       scratch,
+      { position: camera.position, quaternion: camera.quaternion },
     );
     group.current.quaternion.copy(scratch.quaternion);
     group.current.position.copy(readout.origin);
@@ -228,11 +232,28 @@ function GameLoop({
   return null;
 }
 
-function LookAtTable() {
-  useFrame(({ camera }) => {
-    camera.lookAt(0, 0.7, 0);
+function TurnCamera({ team, phase }: { team: TeamId | null; phase: Phase }) {
+  const look = useRef(new THREE.Vector3(0, 0.7, 0));
+  const destPos = useRef(new THREE.Vector3(0, 2.25, 3.7));
+  const destLook = useRef(new THREE.Vector3(0, 0.7, 0));
+  const pose = cameraPose(team, phase);
+  destPos.current.set(...pose.position);
+  destLook.current.set(...pose.lookAt);
+
+  useFrame(({ camera }, dt) => {
+    const t = 1 - Math.exp(-Math.min(dt, 0.08) * 3.1);
+    camera.position.lerp(destPos.current, t);
+    look.current.lerp(destLook.current, t);
+    camera.lookAt(look.current);
   });
-  return null;
+
+  return <PerspectiveCamera makeDefault position={[0, 2.25, 3.7]} fov={46} />;
+}
+
+function throwPowerFromData(data: unknown) {
+  if (typeof data !== "object" || data === null) return 1;
+  const power = Number((data as { power?: unknown }).power);
+  return Number.isFinite(power) ? THREE.MathUtils.clamp(power, 0.3, 2.4) : 1;
 }
 
 function rosterKey(controllers: Player[]) {
@@ -329,7 +350,11 @@ export function BeerPongScene({
       const start = launchPoint(team, aim.z);
       from.set(start.x, start.y, start.z);
       const feel = tuneRef.current;
-      const vel = velocityToHit(from, target, { arc: feel.arc, power: feel.power });
+      const flick = throwPowerFromData(action.data);
+      const vel = velocityToHit(from, target, {
+        arc: feel.arc,
+        power: feel.power * flick,
+      });
       ballRef.current = createBall(from, vel);
       const playerName =
         controllersRef.current.find((player) => player.id === shooter)?.name ?? "Player";
@@ -337,7 +362,7 @@ export function BeerPongScene({
         name: playerName,
         speed: vel.length(),
         arcDeg: (feel.arc * 180) / Math.PI,
-        power: feel.power,
+        power: feel.power * flick,
         targetX: target.x,
         targetZ: target.z,
         result: "air",
@@ -347,6 +372,7 @@ export function BeerPongScene({
   }, [actionsByPlayer, aim, from]);
 
   const shooter = currentId(match);
+  const shooterTeam = shooter ? (match.teamOf[shooter] ?? null) : null;
   const movingId = controllers.reduce<string | null>((best, player) => {
     const sample = gyroByPlayer[player.id];
     if (!sample) return best;
@@ -354,8 +380,10 @@ export function BeerPongScene({
     return sample.timestamp > bestTs ? player.id : best;
   }, null);
   const watchId = focusId ?? movingId ?? shooter ?? controllers[0]?.id ?? null;
-  const aLeft = liveCups(match.cups, "a").length;
-  const bLeft = liveCups(match.cups, "b").length;
+  const viewTeam = testing
+    ? (watchId ? match.teamOf[watchId] : null) ?? shooterTeam ?? (controllers[0] ? "a" : null)
+    : shooterTeam;
+  const viewPhase = testing && controllers.length > 0 ? "aim" : match.phase;
   const aimPlayers =
     testing && match.phase !== "over"
       ? controllers
@@ -367,8 +395,7 @@ export function BeerPongScene({
     <>
       <HostCanvas>
         <color attach="background" args={["#ffffff"]} />
-        <PerspectiveCamera makeDefault position={[0, 2.35, 3.85]} fov={40} />
-        <LookAtTable />
+        <TurnCamera team={viewTeam} phase={viewPhase} />
         <ambientLight intensity={0.9} />
         <directionalLight position={[2.2, 5.4, 3.2]} intensity={1.05} />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -419,18 +446,7 @@ export function BeerPongScene({
         }}
         lastThrow={lastThrow}
       />
-      <div className="pointer-events-none absolute inset-x-0 bottom-14 z-10 flex justify-center px-4">
-        <div className="bg-white/90 px-4 py-2 text-center">
-          <p className="text-sm font-medium">
-            {teamName(match, controllers, "a") || "Blue"} {aLeft}
-            <span className="mx-2 text-black/30">·</span>
-            {bLeft} {teamName(match, controllers, "b") || "Black"}
-          </p>
-          <p className="mt-0.5 text-xs text-black/55">
-            {match.phase === "flight" ? "Ball in the air" : match.message}
-          </p>
-        </div>
-      </div>
+      <TurnHud match={match} controllers={controllers} testing={testing} />
     </>
   );
 }
