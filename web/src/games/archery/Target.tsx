@@ -1,7 +1,8 @@
 "use client";
 
+import { useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Player } from "@/lib/protocol";
 import type { Aim } from "./aim";
@@ -9,48 +10,46 @@ import type { Shot } from "./logic";
 import { windStrength, type Wind } from "./wind";
 
 export const TARGET_Z = -9;
-export const TARGET_Y = 2.2;
+export const TARGET_Y = 1.45;
+/** Outer edge of the painted face. Aim of 1 lands on that ring. */
 export const TARGET_RADIUS = 1.6;
-const BOW_ORIGIN = new THREE.Vector3(0, 1.5, 1.4);
-const FLIGHT_MS = 420;
-const RINGS = 10;
 
 const ACCENT = "#0057FF";
-const BOARD = TARGET_RADIUS * 2.2;
-const LINE = 0.018;
+const BOW_ORIGIN = new THREE.Vector3(0, 1.5, 1.4);
+const FLIGHT_MS = 420;
 
-function woodGrainTexture() {
-  if (typeof document === "undefined") return null;
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.fillStyle = "#c49a62";
-  ctx.fillRect(0, 0, size, size);
-  for (let i = 0; i < 42; i++) {
-    const x = (i / 42) * size;
-    ctx.strokeStyle = i % 4 === 0 ? "rgba(92, 48, 18, 0.22)" : "rgba(168, 110, 52, 0.28)";
-    ctx.lineWidth = i % 7 === 0 ? 7 : 2.4;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.sin(i) * 10, 0);
-    for (let y = 0; y <= size; y += 12) {
-      ctx.lineTo(x + Math.sin(y * 0.035 + i * 0.7) * 14, y);
-    }
-    ctx.stroke();
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.needsUpdate = true;
-  return texture;
-}
+// 1024² watercolor. The inner dark disc is left of the square's center;
+// the extra straw on the right is the cylinder wall, not the scoring face.
+const SCAN = 1024;
+const BULLSEYE_X = 474.1;
+const BULLSEYE_Y = 479.3;
+const FACE_RADIUS_PX = 280;
+const PLANE = (SCAN / FACE_RADIUS_PX) * TARGET_RADIUS;
+const OFFSET_X = (0.5 - BULLSEYE_X / SCAN) * PLANE;
+const OFFSET_Y = (BULLSEYE_Y / SCAN - 0.5) * PLANE;
 
 /** Face position for an aim, where 1 is the outer edge of the target. */
 export function facePoint(x: number, y: number, out: THREE.Vector3) {
   return out.set(x * TARGET_RADIUS, TARGET_Y + y * TARGET_RADIUS, TARGET_Z);
+}
+
+function HayFace() {
+  const map = useTexture("/archery/target.png", (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+  });
+  return (
+    <mesh position={[OFFSET_X, TARGET_Y + OFFSET_Y, TARGET_Z]}>
+      <planeGeometry args={[PLANE, PLANE]} />
+      <meshBasicMaterial
+        map={map}
+        transparent
+        alphaTest={0.12}
+        depthWrite
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
 }
 
 function Arrow({
@@ -78,10 +77,9 @@ function WindSock({ wind }: { wind: Wind }) {
   const strength = windStrength(wind);
   const length = 0.35 + strength * 1.15;
   const blowingRight = wind.x >= 0;
-  // Lean the streamer for the gust's vertical share.
   const lean = Math.atan2(wind.y, Math.abs(wind.x) || 0.001) * 0.6;
   return (
-    <group position={[2.9, 0, TARGET_Z + 0.2]}>
+    <group position={[OFFSET_X + PLANE / 2 + 0.45, 0, TARGET_Z + 0.2]}>
       <mesh position={[0, 1.4, 0]}>
         <cylinderGeometry args={[0.04, 0.05, 2.8, 8]} />
         <meshStandardMaterial color="#111111" />
@@ -137,17 +135,6 @@ export function Target({
     return map;
   }, [order]);
 
-  const woodMap = useMemo(() => woodGrainTexture(), []);
-  const rings = useMemo(
-    () =>
-      Array.from({ length: RINGS }, (_, index) => {
-        const ring = RINGS - index; // 10 in the middle, 1 at the edge
-        const outer = ((RINGS - ring + 1) / RINGS) * TARGET_RADIUS;
-        return { ring, outer };
-      }),
-    [],
-  );
-
   useEffect(() => {
     if (!lastShot) {
       anim.current = null;
@@ -172,12 +159,9 @@ export function Target({
         } else {
           flight.current.visible = true;
           landed.current.copy(BOW_ORIGIN).lerp(state.to, t);
-          // The arrow leaves along the line of aim and is carried across to
-          // where it lands, so the wind is visible as a curve, not a jump.
           const carry = (1 - t) * (1 - t);
           landed.current.x += (state.aimed.x - state.to.x) * carry;
           landed.current.y += (state.aimed.y - state.to.y) * carry;
-          // a little lift early in the flight, gone by the time it lands
           landed.current.y += Math.sin(Math.PI * t) * 0.35 * (1 - t);
           flight.current.position.copy(landed.current);
           flight.current.lookAt(state.to);
@@ -199,32 +183,10 @@ export function Target({
   return (
     <group>
       <WindSock wind={wind} />
+      <Suspense fallback={null}>
+        <HayFace />
+      </Suspense>
 
-      <mesh position={[0, TARGET_Y, TARGET_Z - 0.045]}>
-        <boxGeometry args={[BOARD, BOARD, 0.09]} />
-        <meshStandardMaterial color="#6e401c" roughness={0.94} metalness={0} />
-      </mesh>
-      <mesh position={[0, TARGET_Y, TARGET_Z + 0.002]}>
-        <planeGeometry args={[BOARD * 0.985, BOARD * 0.985]} />
-        <meshStandardMaterial
-          map={woodMap ?? undefined}
-          color={woodMap ? "#ffffff" : "#c49a62"}
-          roughness={0.9}
-          metalness={0}
-        />
-      </mesh>
-      {rings.map(({ ring, outer }) => (
-        <mesh key={ring} position={[0, TARGET_Y, TARGET_Z + 0.012]}>
-          <ringGeometry args={[Math.max(outer - LINE, 0.001), outer, 64]} />
-          <meshBasicMaterial color="#111111" />
-        </mesh>
-      ))}
-      <mesh position={[0, TARGET_Y, TARGET_Z + 0.014]}>
-        <circleGeometry args={[TARGET_RADIUS / RINGS, 32]} />
-        <meshBasicMaterial color="#111111" />
-      </mesh>
-
-      {/* arrows already in the face */}
       {order.map((player) =>
         (shots[player.id] ?? []).map((shot, index) => {
           const spot = facePoint(shot.x, shot.y, new THREE.Vector3());
@@ -238,7 +200,6 @@ export function Target({
         }),
       )}
 
-      {/* the arrow in flight */}
       <group ref={flight} visible={false}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.024, 0.024, 0.7, 8]} />
@@ -246,7 +207,6 @@ export function Target({
         </mesh>
       </group>
 
-      {/* live crosshair for whoever is drawing */}
       <group ref={crosshair} visible={false}>
         <mesh>
           <ringGeometry args={[0.1, 0.13, 24]} />

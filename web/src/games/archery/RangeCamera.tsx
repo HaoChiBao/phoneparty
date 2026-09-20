@@ -4,7 +4,9 @@ import { PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type * as THREE from "three";
-import { TARGET_Y } from "./Target";
+
+/** Eye line stays high so the lower target sits mid-frame when the camera pulls in. */
+const CAMERA_Y = 2.2;
 
 /** Wide enough to read the whole lane; the target is a distant disc. */
 const OUT = { fov: 55, z: 6.5 };
@@ -49,7 +51,7 @@ export function RangeCamera({
     <PerspectiveCamera
       ref={camera}
       makeDefault
-      position={[0, TARGET_Y, OUT.z]}
+      position={[0, CAMERA_Y, OUT.z]}
       fov={OUT.fov}
     />
   );
