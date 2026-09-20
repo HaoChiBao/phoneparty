@@ -18,7 +18,8 @@ export function getRealtimeHttpUrl() {
 
 export function connectRealtime() {
   return io(getRealtimeHttpUrl(), {
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
+    upgrade: true,
     autoConnect: true,
   }) as Socket<ServerToClientEvents, ClientToServerEvents>;
 }
