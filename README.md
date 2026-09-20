@@ -20,7 +20,7 @@ iPhones only expose DeviceOrientation after a tap, and they expect HTTPS (or loc
 
 ## Deploy
 
-- **Web:** Vercel project rooted at `web`. Set `NEXT_PUBLIC_REALTIME_URL` to the Railway public URL.
+- **Web:** Vercel project rooted at `web`. The lockfile records Linux Tailwind/lightningcss binaries so the Vercel build can compile CSS. Set `NEXT_PUBLIC_REALTIME_URL` to the Railway public URL.
 - **Realtime:** Railway deploys from the repo root and runs `npm run start --workspace=server`. Set `CORS_ORIGIN` to the Vercel origin (comma-separated if you have preview URLs).
 
 ## First test
