@@ -36,10 +36,16 @@ import {
   type Phase,
 } from "./rules";
 import { TestPanel, type LastThrowInfo } from "./TestPanel";
+import { ThrowBear } from "./ThrowBear";
 import { TurnHud } from "./TurnHud";
 import { createBall, stepBall, velocityToHit, type BallSim } from "./physics";
 import { DEFAULT_TUNE, type ThrowTune } from "./tune";
 import { actionOn, PONG_SYNC, viewFromMatch } from "./view";
+
+type PendingShot = {
+  from: THREE.Vector3;
+  vel: THREE.Vector3;
+};
 
 const REMATCH_MS = 7000;
 // Keep the made cup readable, but do not make the next player wait through a
@@ -255,16 +261,6 @@ function BallMesh({ ballRef }: { ballRef: RefObject<BallSim | null> }) {
   );
 }
 
-function RestBall({ team }: { team: TeamId }) {
-  const start = launchPoint(team, 0);
-  return (
-    <mesh castShadow position={[start.x, start.y, start.z]}>
-      <sphereGeometry args={[BALL.radius, 24, 24]} />
-      <MatteMaterial color="#ffffff" />
-    </mesh>
-  );
-}
-
 function applyLanding(
   match: Match,
   controllers: Player[],
@@ -404,9 +400,12 @@ export function BeerPongScene({
   const [aimSnap, setAimSnap] = useState<ThrowReadout | null>(null);
   const [lastThrow, setLastThrow] = useState<LastThrowInfo | null>(null);
   const [glowCup, setGlowCup] = useState<string | null>(null);
+  const [bearClip, setBearClip] = useState<"idle" | "play" | "hold">("idle");
+  const [bearPlayId, setBearPlayId] = useState(0);
   const matchRef = useRef(match);
   matchRef.current = match;
   const ballRef = useRef<BallSim | null>(null);
+  const pendingShot = useRef<PendingShot | null>(null);
   const handled = useRef<Record<string, number>>({});
   const controllersRef = useRef(controllers);
   controllersRef.current = controllers;
@@ -475,8 +474,10 @@ export function BeerPongScene({
         continue;
       }
       if (action.type === "resetCups") {
+        pendingShot.current = null;
         ballRef.current = null;
         setGlowCup(null);
+        setBearClip("idle");
         setMatch((current) => refillCups(current));
         continue;
       }
@@ -484,6 +485,7 @@ export function BeerPongScene({
       const current = matchRef.current;
       const tester = testRef.current;
       if (!tester && current.phase !== "aim") continue;
+      if (pendingShot.current || ballRef.current) continue;
       const shooter = tester ? playerId : currentId(current);
       if (!shooter || shooter !== playerId) continue;
       const calib = calibByPlayer[shooter];
@@ -508,9 +510,12 @@ export function BeerPongScene({
         arc: feel.arc,
         power: feel.power,
       });
-      ballRef.current = createBall(from, vel);
       const playerName =
         controllersRef.current.find((player) => player.id === shooter)?.name ?? "Player";
+      pendingShot.current = {
+        from: from.clone(),
+        vel: vel.clone(),
+      };
       setLastThrow({
         name: playerName,
         speed: vel.length(),
@@ -525,8 +530,18 @@ export function BeerPongScene({
           ? beginFlight(latest)
           : latest,
       );
+      setBearClip("play");
+      setBearPlayId((id) => id + 1);
     }
   }, [actionsByPlayer, calibByPlayer, from, gyroByPlayer]);
+
+  function releaseShot() {
+    const shot = pendingShot.current;
+    pendingShot.current = null;
+    setBearClip("hold");
+    if (!shot) return;
+    ballRef.current = createBall(shot.from, shot.vel);
+  }
 
   const snapshot = viewFromMatch(match, controllers, {
     testing,
@@ -552,8 +567,9 @@ export function BeerPongScene({
     ? (watchId ? match.teamOf[watchId] : null) ?? shooterTeam ?? (controllers[0] ? "a" : null)
     : shooterTeam;
   const viewPhase = testing && controllers.length > 0 ? "aim" : match.phase;
-  const showRestBall =
-    Boolean(viewTeam) && viewPhase !== "flight" && viewPhase !== "waiting" && viewPhase !== "over";
+  const shownClip = match.phase === "flight" ? bearClip : "idle";
+  const showBear =
+    Boolean(viewTeam) && viewPhase !== "waiting" && viewPhase !== "over";
 
   return (
     <>
@@ -587,7 +603,6 @@ export function BeerPongScene({
         {match.cups.map((cup) => (
           <CupMesh key={cup.id} cup={cup} glowing={cup.id === glowCup} />
         ))}
-        {showRestBall && viewTeam ? <RestBall team={viewTeam} /> : null}
         <BallMesh ballRef={ballRef} />
         <GameLoop
           matchRef={matchRef}
@@ -613,12 +628,23 @@ export function BeerPongScene({
         onTune={(field, value) => setTune((current) => ({ ...current, [field]: value }))}
         onResetTune={() => setTune(DEFAULT_TUNE)}
         onResetCups={() => {
+          pendingShot.current = null;
           ballRef.current = null;
           setGlowCup(null);
+          setBearClip("idle");
           setMatch((current) => refillCups(current));
         }}
         lastThrow={lastThrow}
       />
+      {viewTeam ? (
+        <ThrowBear
+          team={viewTeam}
+          clip={shownClip}
+          playId={bearPlayId}
+          visible={showBear}
+          onReleased={releaseShot}
+        />
+      ) : null}
       <TurnHud
         match={match}
         controllers={controllers}
