@@ -3,10 +3,12 @@ import { beerPongGame } from "./beer-pong";
 import { hammerGame } from "./hammer";
 import { rangeGame } from "./range";
 import { sandboxGame } from "./sandbox";
+import { shakeGame } from "./shake";
 import type { GameDefinition } from "./types";
 
 const games: GameDefinition[] = [
   hammerGame,
+  shakeGame,
   archeryGame,
   rangeGame,
   beerPongGame,
