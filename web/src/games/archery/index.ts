@@ -11,4 +11,10 @@ export const archeryGame: GameDefinition = {
   hideAimPad: true,
   howToPlay:
     "Scan the QR and enable motion. Point the back of the phone at the TV, tap Ready, then tilt to aim. Hold still for five seconds and the arrow looses. Three arrows each. Aim into the wind.",
+  assets: [
+    "/game_bg.mp4",
+    "/archery/target.png",
+    "/archery/bear-bow.png",
+    "/archery/bear-bow.webm",
+  ],
 };

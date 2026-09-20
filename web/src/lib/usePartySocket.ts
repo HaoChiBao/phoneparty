@@ -16,7 +16,12 @@ import { DEFAULT_GAME_ID } from "./protocol";
 
 type PartySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-export function usePartySocket(code: string, role: Role, name?: string) {
+export function usePartySocket(
+  code: string,
+  role: Role,
+  name?: string,
+  initialGameId?: string,
+) {
   const socketRef = useRef<PartySocket | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selfId, setSelfId] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export function usePartySocket(code: string, role: Role, name?: string) {
   const [calibByPlayer, setCalibByPlayer] = useState<
     Record<string, CalibratedPose>
   >({});
-  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
+  const [gameId, setGameId] = useState(initialGameId || DEFAULT_GAME_ID);
   const [actionsByPlayer, setActionsByPlayer] = useState<
     Record<string, GameActionState>
   >({});

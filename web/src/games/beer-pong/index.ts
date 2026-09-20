@@ -13,4 +13,10 @@ export const beerPongGame: GameDefinition = {
   motionLabels: [{ id: "flick", title: "bear pong flick" }],
   howToPlay:
     "Scan the QR, enable motion, and calibrate at the TV. When your phone is green, flick toward the cups. Sink a cup and throw again. A miss passes the turn.",
+  assets: [
+    "/game_bg.mp4",
+    "/beer-pong/bear-throw.png",
+    "/beer-pong/bear-throw.webm",
+    "/beer-pong/bear-throw.mp4",
+  ],
 };

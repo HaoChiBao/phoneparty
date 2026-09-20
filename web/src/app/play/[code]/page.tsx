@@ -2,9 +2,12 @@ import { HostSession } from "@/components/HostSession";
 
 export default async function PlayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ g?: string }>;
 }) {
   const { code } = await params;
-  return <HostSession code={code.toUpperCase()} />;
+  const { g } = await searchParams;
+  return <HostSession code={code.toUpperCase()} initialGameId={g} />;
 }

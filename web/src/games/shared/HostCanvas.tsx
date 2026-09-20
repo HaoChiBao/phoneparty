@@ -9,21 +9,17 @@ import {
   type ReactNode,
 } from "react";
 import * as THREE from "three";
+import { useCanvasReady } from "./canvasReady";
 
-const FIELD_SRC = "/field.jpg";
+const FIELD_VIDEO = "/game_bg.mp4";
 
-// CSS background-size:cover never stretches. An <img> with width+height 100%
-// uses object-fit:fill until the file's aspect is known, which is why the
-// field looked stretched on first load and normal after a reload (cached).
+// object-fit:cover on the video matches the old CSS background-size:cover, so
+// the field never stretches when the TV aspect does not match the clip.
 const wrapStyle: CSSProperties = {
   position: "absolute",
   inset: 0,
   overflow: "hidden",
   backgroundColor: "#87c4ef",
-  backgroundImage: `url(${FIELD_SRC})`,
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "center center",
-  backgroundSize: "cover",
 };
 
 function applyPerspectiveAspect(camera: THREE.Camera, width: number, height: number) {
@@ -75,15 +71,44 @@ function FitView() {
   return null;
 }
 
+function FieldVideo() {
+  const video = useRef<HTMLVideoElement>(null);
+
+  useLayoutEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    el.muted = true;
+    el.defaultMuted = true;
+    el.volume = 0;
+    void el.play().catch(() => {});
+  }, []);
+
+  return (
+    <video
+      ref={video}
+      src={FIELD_VIDEO}
+      autoPlay
+      muted
+      loop
+      playsInline
+      disablePictureInPicture
+      controls={false}
+      aria-hidden
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+    />
+  );
+}
+
 export function HostCanvas({
   children,
-  backgroundSrc = FIELD_SRC,
+  backgroundSrc,
 }: {
   children: ReactNode;
   backgroundSrc?: string;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  const reportReady = useCanvasReady();
 
   useLayoutEffect(() => {
     const el = wrap.current;
@@ -106,7 +131,21 @@ export function HostCanvas({
   }, []);
 
   return (
-    <div ref={wrap} style={{ ...wrapStyle, backgroundImage: `url(${backgroundSrc})` }}>
+    <div
+      ref={wrap}
+      style={{
+        ...wrapStyle,
+        ...(backgroundSrc
+          ? {
+              backgroundImage: `url(${backgroundSrc})`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center center",
+              backgroundSize: "cover",
+            }
+          : {}),
+      }}
+    >
+      {backgroundSrc ? null : <FieldVideo />}
       {ready ? (
         <Canvas
           className="absolute inset-0 block h-full w-full bg-transparent"
@@ -125,6 +164,7 @@ export function HostCanvas({
             gl.setClearColor(0x000000, 0);
             scene.background = null;
             applyPerspectiveAspect(camera, size.width, size.height);
+            reportReady?.();
           }}
         >
           <FitView />

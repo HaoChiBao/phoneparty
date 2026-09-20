@@ -53,6 +53,8 @@ export type GameDefinition = {
   howToPlay?: string;
   // Hidden under the Advanced picker on the lobby and TV.
   advanced?: boolean;
+  // Images and videos to finish loading before the first TV scene appears.
+  assets?: string[];
 };
 
 export function motionLabelsFor(game: GameDefinition): MotionLabel[] {

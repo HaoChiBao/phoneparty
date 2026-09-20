@@ -5,6 +5,12 @@ import { hammerGame } from "./hammer";
 import { shakeGame } from "./shake";
 import type { GameDefinition } from "./types";
 
+export const SHARED_HOST_ASSETS = ["/bearlympics.png", "/game-sign.png"];
+
+export function hostAssetsFor(game: GameDefinition) {
+  return [...new Set([...SHARED_HOST_ASSETS, ...(game.assets ?? [])])];
+}
+
 const games: GameDefinition[] = [
   archeryGame,
   fishingGame,

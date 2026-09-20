@@ -14,4 +14,5 @@ export const shakeGame: GameDefinition = {
   howToPlay:
     "Scan the QR and enable motion. Hold the phone flat with the camera facing the ground, grab a trunk, and shake. Thirty seconds, most apples wins.",
   advanced: true,
+  assets: ["/game_bg.mp4", "/shake/apple.png"],
 };

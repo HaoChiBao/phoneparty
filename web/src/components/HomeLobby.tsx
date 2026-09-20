@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { getGame, hostAssetsFor } from "@/games/catalog";
 import { DEFAULT_GAME_ID } from "@/lib/protocol";
+import { preloadAssets } from "@/lib/preloadAssets";
 import { createRoom } from "@/lib/realtime";
 
 const PLANKS = [
@@ -34,6 +37,7 @@ export function HomeLobby() {
   const [phase, setPhase] = useState<"intro" | "overlay" | "done">("intro");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const done = phase === "done";
 
   useEffect(() => {
@@ -47,9 +51,14 @@ export function HomeLobby() {
     if (busy) return;
     setBusy(true);
     setError(null);
+    setProgress(0);
     try {
-      const room = await createRoom(gameId);
-      router.push(`/play/${room.code}`);
+      const game = getGame(gameId);
+      const [room] = await Promise.all([
+        createRoom(gameId),
+        preloadAssets(hostAssetsFor(game), setProgress),
+      ]);
+      router.push(`/play/${room.code}?g=${encodeURIComponent(gameId)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start a room");
       setBusy(false);
@@ -128,6 +137,7 @@ export function HomeLobby() {
           )}
         </div>
       </div>
+      {busy ? <LoadingScreen progress={progress} /> : null}
     </main>
   );
 }
