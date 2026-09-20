@@ -7,7 +7,6 @@ import { useServerClock } from "./clock";
 import { fishPosition, LEAD_IN_MS } from "./school";
 import { River } from "./River";
 import { secondsLeft, useRoundState } from "./logic";
-import { SwipeHint } from "./SwipeHint";
 
 export function FishingScene({
   controllers,
@@ -96,21 +95,13 @@ export function FishingScene({
               <p className="text-2xl font-bold tracking-tight">
                 {controllers.length === 0
                   ? "Waiting for a phone…"
-                  : "Tap Ready to start the run"}
+                  : "Ready"}
               </p>
-              <div className="flex items-center gap-4">
-                <SwipeHint size={124} />
-                <p className="max-w-[18rem] text-left text-sm leading-5 text-black/60">
-                  Point the phone&apos;s camera at the TV to move your paw. Line
-                  it up on a salmon and jab the phone straight down to swipe.
-                  Thirty seconds, most fish wins.
-                </p>
-              </div>
             </>
           ) : round.phase === "countdown" ? (
             <>
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
-                Get your paws up
+                Ready
               </p>
               <p className="text-6xl font-bold tabular-nums tracking-tight">
                 {countdown}
@@ -118,10 +109,7 @@ export function FishingScene({
             </>
           ) : round.phase === "fishing" ? (
             <p className="text-2xl font-bold tracking-tight">
-              Swipe the salmon
-              <span className="ml-3 font-normal text-black/45">
-                {round.caught.length} caught
-              </span>
+              {round.caught.length} caught
             </p>
           ) : (
             <>
@@ -139,10 +127,6 @@ export function FishingScene({
                     {round.countByPlayer[round.winners[0].id] ?? 0}
                   </span>
                 ) : null}
-              </p>
-              <p className="text-sm text-black/55">
-                Tap <span className="font-medium text-black">New run</span> on
-                any phone to fish again.
               </p>
             </>
           )}

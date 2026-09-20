@@ -6,7 +6,6 @@ import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { useRoundState } from "./logic";
 import { Orchard } from "./Orchard";
-import { SwingHint } from "./SwingHint";
 
 const ACCENT = "#0057FF";
 
@@ -51,10 +50,6 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
               <p className="text-2xl font-bold tracking-tight">
                 Waiting for a phone…
               </p>
-              <p className="text-sm text-black/55">
-                Scan the QR, tap Enable motion, tap Ready, then swing when the
-                phone turns green. Hit the tree.
-              </p>
             </>
           ) : round.done ? (
             <>
@@ -69,10 +64,6 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
                   </span>
                 ) : null}
               </p>
-              <p className="text-sm text-black/55">
-                Tap <span className="font-medium text-black">New round</span> on
-                any phone to play again.
-              </p>
             </>
           ) : (
             <>
@@ -85,13 +76,6 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
               <p className="text-3xl font-bold tracking-tight">
                 {round.current?.name}
               </p>
-              <div className="flex items-center gap-4">
-                <SwingHint size={128} accent={activeColor} />
-                <p className="max-w-[16rem] text-left text-sm leading-5 text-black/60">
-                  You are the bear. When the phone is green, swing down and
-                  knock apples out of the tree.
-                </p>
-              </div>
             </>
           )}
 

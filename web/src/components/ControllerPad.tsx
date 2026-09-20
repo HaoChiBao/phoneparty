@@ -12,6 +12,7 @@ import {
   stepPosition,
 } from "@/lib/orientation";
 import { MotionRecordPad } from "@/components/MotionRecordPad";
+import { HowToPlay } from "@/components/HowToPlay";
 import { getGame } from "@/games/catalog";
 import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 import { usePartySocket } from "@/lib/usePartySocket";
@@ -168,7 +169,10 @@ export function ControllerPad({ code }: { code: string }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col justify-between bg-white px-5 py-6">
+    <div className="relative flex min-h-dvh flex-col justify-between bg-white px-5 py-6">
+      {game.howToPlay ? (
+        <HowToPlay key={game.id} title={game.title} body={game.howToPlay} />
+      ) : null}
       <header>
         <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
           {game.title}

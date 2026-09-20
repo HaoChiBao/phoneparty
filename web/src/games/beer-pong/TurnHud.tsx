@@ -28,13 +28,12 @@ export function TurnHud({
   const joined = controllers.length;
 
   let title = match.message;
-  let detail = "Need 2 phones to start";
+  let detail = "";
   if (testing) {
     title = "Test";
-    detail = "Flick anytime. The TV stays on this table.";
   } else if (match.phase === "waiting") {
     title = "Waiting";
-    detail = joined === 1 ? "1 of 2 phones in. Join one more." : "Need 2 phones to start";
+    detail = joined === 1 ? "1 of 2 phones" : "";
   } else if (match.phase === "flight") {
     title = shooter?.name ?? "Throw";
     detail =
@@ -44,22 +43,17 @@ export function TurnHud({
           ? "On the table"
           : lastThrow?.result === "miss"
             ? "Miss"
-            : "Ball in the air";
+            : "";
   } else if (match.phase === "over") {
     title = match.message;
-    detail = "Next game in a few seconds";
-  } else if (shooter && !shooterCalibrated) {
-    title = shooter.name;
-    detail = "Calibrate at the TV, then flick";
   } else if (match.redemption) {
     title = shooter?.name ?? "Redemption";
-    detail = "Redemption. That phone is green. Flick to throw.";
+    detail = "Redemption";
   } else if (match.overtime) {
     title = shooter?.name ?? "Overtime";
-    detail = "Overtime. That phone is green. Flick to throw.";
+    detail = "Overtime";
   } else if (shooter) {
     title = shooter.name;
-    detail = "That phone is green. Flick to throw";
   }
 
   return (
@@ -104,14 +98,8 @@ export function TurnHud({
                     : "Turn"}
           </p>
           <p className="mt-1 text-2xl font-bold tracking-tight">{title}</p>
-          <p className="mt-1 text-sm text-black/55">{detail}</p>
-          {!testing && match.phase === "aim" && shooter ? (
-            <p
-              className="mt-2 text-[11px] uppercase tracking-[0.2em]"
-              style={{ color: shooterCalibrated ? LIVE_GREEN : accent }}
-            >
-              {shooterCalibrated ? "Phone live" : "Waiting on calibrate"}
-            </p>
+          {detail ? (
+            <p className="mt-1 text-sm text-black/55">{detail}</p>
           ) : null}
         </div>
       </div>

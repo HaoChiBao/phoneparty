@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
 import { aimFromSample } from "./aim";
-import { AimHint } from "./AimHint";
 import { BowBear, type BowClip } from "./BowBear";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
 import { RangeCamera } from "./RangeCamera";
@@ -146,10 +145,6 @@ export function ArcheryScene({
               <p className="text-2xl font-bold tracking-tight">
                 Waiting for a phone…
               </p>
-              <p className="text-sm text-black/55">
-                Scan the QR, tap Enable motion, then aim with the back of the
-                phone.
-              </p>
             </>
           ) : round.done ? (
             <>
@@ -164,10 +159,6 @@ export function ArcheryScene({
                   </span>
                 ) : null}
               </p>
-              <p className="text-sm text-black/55">
-                Tap <span className="font-medium text-black">New round</span> on
-                any phone to shoot again.
-              </p>
             </>
           ) : liveAim ? (
             <>
@@ -181,9 +172,6 @@ export function ArcheryScene({
               <p className="text-3xl font-bold tracking-tight">
                 {current?.name} is aiming
               </p>
-              <p className="text-sm text-black/55">
-                Hold it steady. The arrow looses on its own.
-              </p>
               <WindTag wind={round.wind} />
             </>
           ) : (
@@ -195,14 +183,6 @@ export function ArcheryScene({
                 Up now · {round.arrowsLeft} of {ARROWS_PER_PLAYER} left
               </p>
               <p className="text-3xl font-bold tracking-tight">{current?.name}</p>
-              <div className="flex items-center gap-4">
-                <AimHint size={124} accent={activeColor} />
-                <p className="max-w-[17rem] text-left text-sm leading-5 text-black/60">
-                  Point the back of the phone at the TV, screen facing you, and
-                  tap Ready. Tilt to aim, then hold still — and aim into the
-                  wind.
-                </p>
-              </div>
               <WindTag wind={round.wind} />
             </>
           )}

@@ -56,9 +56,6 @@ export function HostHud({
                 </button>
               </div>
               <h1 className="mt-1 text-4xl font-bold tracking-tight">{code}</h1>
-              <p className="mt-2 max-w-xs text-sm text-black/60">
-                Scan the QR with a phone. Two phones max.
-              </p>
               <p className="mt-2 text-xs text-black/45">
                 {connected ? "Realtime connected" : "Connecting…"}
                 {error ? ` · ${error}` : ""}
