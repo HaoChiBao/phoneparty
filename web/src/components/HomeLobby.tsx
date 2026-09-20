@@ -86,7 +86,7 @@ export function HomeLobby() {
       <img
         src="/bearlympics.png"
         alt="Bearlympics"
-        className={`pointer-events-none absolute left-1/2 top-[7%] z-10 w-[min(86vw,46rem)] origin-top object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.28)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+        className={`pointer-events-none absolute left-1/2 top-[12%] z-10 w-[min(94vw,54rem)] origin-top object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.28)] transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
           done
             ? "-translate-x-1/2 translate-y-0 scale-100"
             : "-translate-x-1/2 -translate-y-[130%] scale-50"
