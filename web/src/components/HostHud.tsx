@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { listAdvancedGames, listFeaturedGames } from "@/games/catalog";
+import { GameSign } from "@/components/GameSign";
+import { getGame, listAdvancedGames, listFeaturedGames } from "@/games/catalog";
 import type { GyroSample, Player } from "@/lib/protocol";
 
 export function HostHud({
+  code,
   joinUrl,
   players,
   connected,
@@ -26,6 +28,7 @@ export function HostHud({
   onKick: (playerId: string) => void;
 }) {
   const controllers = players.filter((player) => player.role === "controller");
+  const game = getGame(gameId);
   const featured = listFeaturedGames();
   const advanced = listAdvancedGames();
   const advancedSelected = advanced.some((game) => game.id === gameId);
@@ -119,7 +122,12 @@ export function HostHud({
           </p>
         </div>
       </div>
-      <div className="pointer-events-auto flex flex-wrap justify-end gap-2 pb-1">
+      <GameSign
+        title={game.title}
+        body={game.howToPlay ?? game.blurb}
+        code={code}
+      />
+      <div className="pointer-events-auto flex flex-wrap justify-start gap-2 pb-1 pr-[min(27rem,42vw)]">
         {controllers.length === 0 ? (
           <span className="rounded-2xl bg-white/90 px-3 py-1.5 text-xs text-black/55">
             Waiting for a phone…
