@@ -11,6 +11,7 @@ export type GameSceneProps = {
 export type GamePadProps = {
   sendAction: (type: string, data?: unknown) => void;
   lastAction?: GameActionState;
+  sample?: GyroSample | null;
 };
 
 export type GameDefinition = {

@@ -185,7 +185,7 @@ export function ControllerPad({ code }: { code: string }) {
             : "No position yet"}
         </p>
         {PadExtra ? (
-          <PadExtra sendAction={sendGameAction} lastAction={lastAction} />
+          <PadExtra sendAction={sendGameAction} lastAction={lastAction} sample={sample} />
         ) : null}
       </div>
 

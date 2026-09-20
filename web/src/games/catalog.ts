@@ -1,8 +1,9 @@
+import { beerPongGame } from "./beer-pong";
 import { rangeGame } from "./range";
 import { sandboxGame } from "./sandbox";
 import type { GameDefinition } from "./types";
 
-const games: GameDefinition[] = [rangeGame, sandboxGame];
+const games: GameDefinition[] = [rangeGame, beerPongGame, sandboxGame];
 
 export function listGames() {
   return games;
