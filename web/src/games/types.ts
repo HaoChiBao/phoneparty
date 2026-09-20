@@ -23,6 +23,8 @@ export type GamePadProps = {
   selfId: string | null;
   motionReady: boolean;
   sample: GyroSample | null;
+  calib: CalibratedPose | null;
+  onCalibrate: () => void;
 };
 
 export type GameDefinition = {
@@ -33,4 +35,6 @@ export type GameDefinition = {
   PadExtra?: ComponentType<GamePadProps>;
   // Games that do not aim at the TV can drop the shared aim pad and its copy.
   hideAimPad?: boolean;
+  // Keep the shared Calibrate button when the aim pad is hidden.
+  showCalibrate?: boolean;
 };

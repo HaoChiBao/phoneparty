@@ -7,10 +7,12 @@ export function TurnHud({
   match,
   controllers,
   testing,
+  shooterCalibrated,
 }: {
   match: Match;
   controllers: Player[];
   testing: boolean;
+  shooterCalibrated: boolean;
 }) {
   const shooterId = currentId(match);
   const shooter = controllers.find((player) => player.id === shooterId);
@@ -35,6 +37,9 @@ export function TurnHud({
   } else if (match.phase === "over") {
     title = match.message;
     detail = "Next game in a few seconds";
+  } else if (shooter && !shooterCalibrated) {
+    title = shooter.name;
+    detail = "Calibrate at the TV, then flick";
   } else if (match.redemption) {
     title = shooter?.name ?? "Redemption";
     detail = "Redemption. Flick the phone to throw.";

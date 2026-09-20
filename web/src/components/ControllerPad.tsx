@@ -12,7 +12,7 @@ import {
   stepPosition,
 } from "@/lib/orientation";
 import { getGame } from "@/games/catalog";
-import type { GyroSample } from "@/lib/protocol";
+import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 import { usePartySocket } from "@/lib/usePartySocket";
 
 export function ControllerPad({ code }: { code: string }) {
@@ -24,6 +24,7 @@ export function ControllerPad({ code }: { code: string }) {
     selfId,
     gameId,
     actionsByPlayer,
+    calibByPlayer,
     sendGameAction,
     kicked,
     rejoin,
@@ -31,15 +32,21 @@ export function ControllerPad({ code }: { code: string }) {
   const [motionReady, setMotionReady] = useState(false);
   const [motionError, setMotionError] = useState<string | null>(null);
   const [sample, setSample] = useState<GyroSample | null>(null);
+  const [localCalib, setLocalCalib] = useState<CalibratedPose | null>(null);
   const latest = useRef<GyroSample | null>(null);
   const position = useRef(createPositionState());
   const worldQuat = useRef(new THREE.Quaternion());
+  useEffect(() => {
+    if (kicked) setLocalCalib(null);
+  }, [kicked]);
   const self = players.find((player) => player.id === selfId);
   const accent = self?.color ?? "#0057FF";
   const game = getGame(gameId);
   const PadExtra = game.PadExtra;
   const hideAimPad = Boolean(game.hideAimPad);
+  const showCalibrate = !hideAimPad || Boolean(game.showCalibrate);
   const lastAction = selfId ? actionsByPlayer[selfId] : undefined;
+  const selfCalib = (selfId ? calibByPlayer[selfId] ?? null : null) ?? localCalib;
 
   function publish(next: GyroSample) {
     latest.current = next;
@@ -91,6 +98,17 @@ export function ControllerPad({ code }: { code: string }) {
       await requestMotionPermission();
       setMotionReady(true);
       setMotionError(null);
+      if (!latest.current) {
+        publish({
+          alpha: 0,
+          beta: 0,
+          gamma: 0,
+          x: 0,
+          y: 0,
+          z: 0,
+          timestamp: Date.now(),
+        });
+      }
     } catch (err) {
       setMotionError(err instanceof Error ? err.message : "Motion unavailable");
     }
@@ -117,8 +135,15 @@ export function ControllerPad({ code }: { code: string }) {
   }
 
   function calibrate() {
-    const pose = latest.current;
-    if (!pose) return;
+    const pose = latest.current ?? {
+      alpha: 0,
+      beta: 0,
+      gamma: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+      timestamp: Date.now(),
+    };
     resetPosition(position.current);
     const next: GyroSample = {
       ...pose,
@@ -128,14 +153,16 @@ export function ControllerPad({ code }: { code: string }) {
       timestamp: Date.now(),
     };
     publish(next);
-    socketRef.current?.emit("calibrate", {
+    const saved: CalibratedPose = {
       alpha: next.alpha,
       beta: next.beta,
       gamma: next.gamma,
       x: 0,
       y: 0,
       z: 0,
-    });
+    };
+    setLocalCalib(saved);
+    socketRef.current?.emit("calibrate", saved);
   }
 
   return (
@@ -150,7 +177,9 @@ export function ControllerPad({ code }: { code: string }) {
             ? "The TV removed you from the room."
             : !connected
               ? "Joining the room…"
-              : hideAimPad
+              : hideAimPad && showCalibrate
+                ? "You are in the room. Enable motion, then calibrate before you throw."
+                : hideAimPad
                 ? "You are in the room. Enable motion, then follow the prompt below."
                 : "You are in the room. Enable motion, point the front of the phone at the TV, then calibrate."}
         </p>
@@ -200,6 +229,8 @@ export function ControllerPad({ code }: { code: string }) {
             selfId={selfId}
             motionReady={motionReady}
             sample={sample}
+            calib={selfCalib}
+            onCalibrate={calibrate}
           />
         ) : null}
       </div>
@@ -221,17 +252,19 @@ export function ControllerPad({ code }: { code: string }) {
           >
             Enable motion
           </button>
-        ) : hideAimPad ? null : (
+        ) : showCalibrate ? (
           <button
             type="button"
             onClick={calibrate}
             className="h-12 border border-black text-[15px] font-medium"
           >
-            Calibrate at the TV
+            {selfCalib ? "Recalibrate at the TV" : "Calibrate at the TV"}
           </button>
-        )}
+        ) : null}
         <p className="text-center text-xs text-black/40">
-          {hideAimPad
+          {hideAimPad && showCalibrate
+            ? "Calibrate once, then flick. A straight flick aims at the middle of the cups. iPhones need HTTPS and a tap before sensors stream."
+            : hideAimPad
             ? "Hold the phone flat with the rear camera facing the floor. iPhones need HTTPS and a tap before sensors stream."
             : "Aim with the front of the phone, the camera-facing side. iPhones need HTTPS and a tap before sensors stream. On a computer, drag the remote."}
         </p>

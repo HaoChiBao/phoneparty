@@ -98,7 +98,7 @@ export function maybeRerack(cups: CupSlot[], team: TeamId) {
   return RERACK_AT.has(left) ? compactRack(cups, team) : cups;
 }
 
-export function launchPoint(team: TeamId, aimZ: number) {
+export function launchPoint(team: TeamId, aimZ = 0) {
   const half = TABLE.width / 2 - 0.08;
   return {
     x: team === "a" ? -TABLE.length / 2 - 0.08 : TABLE.length / 2 + 0.08,

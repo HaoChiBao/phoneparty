@@ -4,29 +4,39 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { GamePadProps } from "@/games/types";
 import { createFlickState, readFlickAccel, stepFlick, swipeFlick } from "./flick";
 
-export function BeerPongPad({ sendAction, sample }: GamePadProps) {
+export function BeerPongPad({ sendAction, sample, calib, onCalibrate, motionReady }: GamePadProps) {
   const [testing, setTesting] = useState(false);
-  const [status, setStatus] = useState("Aim at the cups, then flick.");
+  const [status, setStatus] = useState("Calibrate at the TV, then flick.");
   const flick = useRef(createFlickState());
   const swipe = useRef<{ y: number; t: number } | null>(null);
   const sendRef = useRef(sendAction);
   sendRef.current = sendAction;
+  const ready = Boolean(calib);
 
-  function fire(power: number, peak: number) {
-    sendRef.current("throw", { power, peak });
-    setStatus(`Flick ${peak.toFixed(0)} · power ${power.toFixed(2)}`);
+  function fire(power: number, peak: number, ax: number, ay: number, az: number) {
+    if (!ready) {
+      setStatus("Calibrate at the TV first.");
+      return;
+    }
+    sendRef.current("throw", { power, peak, ax, ay, az });
+    setStatus(`Flick ${peak.toFixed(0)} · nudge ${ax.toFixed(1)}, ${ay.toFixed(1)}`);
   }
+
+  useEffect(() => {
+    if (!ready) setStatus("Calibrate at the TV, then flick.");
+    else setStatus("Flick. A straight throw aims at the middle cups.");
+  }, [ready]);
 
   useEffect(() => {
     const onMotion = (event: DeviceMotionEvent) => {
       const accel = readFlickAccel(event);
       if (!accel) return;
       const result = stepFlick(flick.current, accel, Date.now());
-      if (result) fire(result.power, result.peak);
+      if (result) fire(result.power, result.peak, result.ax, result.ay, result.az);
     };
     window.addEventListener("devicemotion", onMotion, true);
     return () => window.removeEventListener("devicemotion", onMotion, true);
-  }, []);
+  }, [ready]);
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     swipe.current = { y: event.clientY, t: Date.now() };
@@ -42,7 +52,7 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
     swipe.current = null;
     if (!start) return;
     const result = swipeFlick(start.y, event.clientY, start.t, Date.now());
-    if (result) fire(result.power, result.peak);
+    if (result) fire(result.power, result.peak, result.ax, result.ay, result.az);
   }
 
   function toggleTest() {
@@ -53,6 +63,16 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
 
   return (
     <div className="flex w-full max-w-xs flex-col gap-2">
+      {!ready ? (
+        <button
+          type="button"
+          onClick={onCalibrate}
+          disabled={!motionReady}
+          className="h-12 bg-accent text-[15px] font-medium text-white disabled:opacity-40"
+        >
+          {motionReady ? "Calibrate at the TV" : "Enable motion first"}
+        </button>
+      ) : null}
       <div
         role="button"
         tabIndex={0}
@@ -64,9 +84,11 @@ export function BeerPongPad({ sendAction, sample }: GamePadProps) {
           swipe.current = null;
         }}
       >
-        <p className="text-lg font-medium">Flick</p>
+        <p className="text-lg font-medium">{ready ? "Flick" : "Calibrate first"}</p>
         <p className="mt-1 text-center text-xs leading-4 text-white/80">
-          Throw with the phone, or swipe up here.
+          {ready
+            ? "Throw with the phone, or swipe up here."
+            : "Hold the phone toward the TV, then calibrate."}
         </p>
       </div>
       <p className="text-center text-xs leading-4 text-black/45">{status}</p>
