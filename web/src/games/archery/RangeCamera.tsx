@@ -32,13 +32,14 @@ export function RangeCamera({
     if (shotKey) shotAt.current = performance.now();
   }, [shotKey]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const cam = camera.current;
     if (!cam) return;
     const watching = shotAt.current > 0 && performance.now() - shotAt.current < WATCH_MS;
     const target = drawing || watching ? IN : OUT;
     // Frame-rate independent smoothing, so the move looks the same at 30 or 120fps.
     const k = 1 - Math.pow(0.0016, delta);
+    cam.aspect = state.size.width / Math.max(state.size.height, 1);
     cam.fov += (target.fov - cam.fov) * k;
     cam.position.z += (target.z - cam.position.z) * k;
     cam.updateProjectionMatrix();
