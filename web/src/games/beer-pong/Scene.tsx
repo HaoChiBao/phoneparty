@@ -244,6 +244,16 @@ function BallMesh({ ballRef }: { ballRef: RefObject<BallSim | null> }) {
   );
 }
 
+function RestBall({ team }: { team: TeamId }) {
+  const start = launchPoint(team, 0);
+  return (
+    <mesh castShadow position={[start.x, start.y, start.z]}>
+      <sphereGeometry args={[BALL.radius, 24, 24]} />
+      <MatteMaterial color="#ffffff" />
+    </mesh>
+  );
+}
+
 function applyLanding(
   match: Match,
   controllers: Player[],
@@ -355,7 +365,7 @@ function TurnCamera({ team, phase }: { team: TeamId | null; phase: Phase }) {
     camera.lookAt(look.current);
   });
 
-  return <PerspectiveCamera makeDefault position={[0, 2.45, 1.55]} fov={40} />;
+  return <PerspectiveCamera makeDefault position={[0, 2.45, 1.55]} fov={42} />;
 }
 
 function rosterKey(controllers: Player[]) {
@@ -519,6 +529,8 @@ export function BeerPongScene({
     ? (watchId ? match.teamOf[watchId] : null) ?? shooterTeam ?? (controllers[0] ? "a" : null)
     : shooterTeam;
   const viewPhase = testing && controllers.length > 0 ? "aim" : match.phase;
+  const showRestBall =
+    Boolean(viewTeam) && viewPhase !== "flight" && viewPhase !== "waiting" && viewPhase !== "over";
 
   return (
     <>
@@ -552,6 +564,7 @@ export function BeerPongScene({
         {match.cups.map((cup) => (
           <CupMesh key={cup.id} cup={cup} glowing={cup.id === glowCup} />
         ))}
+        {showRestBall && viewTeam ? <RestBall team={viewTeam} /> : null}
         <BallMesh ballRef={ballRef} />
         <GameLoop
           matchRef={matchRef}

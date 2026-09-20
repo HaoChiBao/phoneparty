@@ -12,13 +12,13 @@ const OVERVIEW: CameraPose = {
 };
 
 const TEAM_A: CameraPose = {
-  position: [-0.22, 2.08, 0],
-  lookAt: [0.62, 0.8, 0],
+  position: [-1.68, 1.62, 0],
+  lookAt: [0.52, 0.86, 0],
 };
 
 const TEAM_B: CameraPose = {
-  position: [0.22, 2.08, 0],
-  lookAt: [-0.62, 0.8, 0],
+  position: [1.68, 1.62, 0],
+  lookAt: [-0.52, 0.86, 0],
 };
 
 export function cameraPose(team: TeamId | null, phase: Phase): CameraPose {

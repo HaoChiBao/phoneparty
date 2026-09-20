@@ -100,10 +100,11 @@ export function maybeRerack(cups: CupSlot[], team: TeamId) {
 }
 
 export function launchPoint(team: TeamId, aimZ = 0) {
+  const sign = team === "a" ? -1 : 1;
   const half = TABLE.width / 2 - 0.08;
   return {
-    x: team === "a" ? -TABLE.length / 2 - 0.08 : TABLE.length / 2 + 0.08,
-    y: 1.12,
+    x: sign * (TABLE.length / 2 - 0.18),
+    y: TABLE.height + 0.52,
     z: Math.max(-half, Math.min(half, aimZ)),
   };
 }
