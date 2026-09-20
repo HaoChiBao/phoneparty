@@ -15,7 +15,6 @@ export function SandboxScene({
 
   return (
     <HostCanvas>
-      <color attach="background" args={["#ffffff"]} />
       <PerspectiveCamera makeDefault position={[0, 2.2, 7.2]} fov={55} />
       <ambientLight intensity={0.9} />
       <directionalLight position={[2, 5, 3]} intensity={0.9} />

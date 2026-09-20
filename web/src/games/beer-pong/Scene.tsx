@@ -1,8 +1,9 @@
 "use client";
 
-import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
+import { ContactShadows, PerspectiveCamera, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -35,7 +36,7 @@ import {
   type Match,
   type Phase,
 } from "./rules";
-import { TestPanel, type LastThrowInfo } from "./TestPanel";
+import { type LastThrowInfo } from "./TestPanel";
 import { ThrowBear } from "./ThrowBear";
 import { TurnHud } from "./TurnHud";
 import { createBall, stepBall, velocityToHit, type BallSim } from "./physics";
@@ -54,7 +55,7 @@ const REVEAL_MS = 180;
 
 const TABLE_GREEN = "#2db85a";
 const TABLE_APRON = "#1a7a44";
-const CUP_ORANGE = "#EBA02A";
+const CUP_RED = "#E1251B";
 const CUP_WHITE = "#ffffff";
 const GLOW = "#FFE27A";
 
@@ -142,6 +143,21 @@ function Table() {
   );
 }
 
+function GrassFloor() {
+  const map = useTexture("/field.jpg");
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = THREE.RepeatWrapping;
+  map.wrapT = THREE.ClampToEdgeWrapping;
+  map.repeat.set(2.6, 0.36);
+  map.offset.set(0, 0.02);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[28, 22]} />
+      <meshStandardMaterial map={map} roughness={0.95} />
+    </mesh>
+  );
+}
+
 function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
   const light = useRef<THREE.PointLight>(null);
   const beams = useRef<THREE.Group>(null);
@@ -160,7 +176,7 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[CUP.rimRadius, CUP.baseRadius, h, 28, 1, true]} />
         <meshStandardMaterial
-          color={CUP_ORANGE}
+          color={CUP_RED}
           roughness={0.36}
           emissive={glowing ? GLOW : "#000000"}
           emissiveIntensity={glowing ? 1.6 : 0}
@@ -179,7 +195,7 @@ function CupMesh({ cup, glowing }: { cup: CupSlot; glowing: boolean }) {
       <mesh castShadow position={[0, -h / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[CUP.baseRadius, 24]} />
         <meshStandardMaterial
-          color={CUP_ORANGE}
+          color={CUP_RED}
           roughness={0.36}
           emissive={glowing ? GLOW : "#000000"}
           emissiveIntensity={glowing ? 1.2 : 0}
@@ -538,7 +554,6 @@ export function BeerPongScene({
   function releaseShot() {
     const shot = pendingShot.current;
     pendingShot.current = null;
-    setBearClip("hold");
     if (!shot) return;
     ballRef.current = createBall(shot.from, shot.vel);
   }
@@ -574,15 +589,13 @@ export function BeerPongScene({
   return (
     <>
       <HostCanvas>
-        <color attach="background" args={["#ffffff"]} />
         <TurnCamera team={viewTeam} phase={viewPhase} />
         <ambientLight intensity={0.95} />
         <ShadowLight position={[2.2, 5.4, 3.2]} intensity={1.15} coverage={6} />
         <directionalLight position={[-2.4, 3.8, -2.6]} intensity={0.45} />
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-          <planeGeometry args={[14, 12]} />
-          <MatteMaterial color="#ffffff" />
-        </mesh>
+        <Suspense fallback={null}>
+          <GrassFloor />
+        </Suspense>
         <ContactShadows
           position={[0, 0.015, 0]}
           opacity={0.3}
@@ -615,27 +628,6 @@ export function BeerPongScene({
           setGlowCup={setGlowCup}
         />
       </HostCanvas>
-      <TestPanel
-        testing={testing}
-        onToggle={() => setTesting((on) => !on)}
-        controllers={controllers}
-        focusId={watchId}
-        onFocus={setFocusId}
-        sample={watchId ? gyroByPlayer[watchId] : undefined}
-        calib={watchId ? calibByPlayer[watchId] : undefined}
-        aim={aimSnap}
-        tune={tune}
-        onTune={(field, value) => setTune((current) => ({ ...current, [field]: value }))}
-        onResetTune={() => setTune(DEFAULT_TUNE)}
-        onResetCups={() => {
-          pendingShot.current = null;
-          ballRef.current = null;
-          setGlowCup(null);
-          setBearClip("idle");
-          setMatch((current) => refillCups(current));
-        }}
-        lastThrow={lastThrow}
-      />
       {viewTeam ? (
         <ThrowBear
           team={viewTeam}

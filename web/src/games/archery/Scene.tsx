@@ -25,8 +25,6 @@ function Stage({
 }) {
   return (
     <>
-      <color attach="background" args={["#f4f6fa"]} />
-      <fog attach="fog" args={["#f4f6fa", 18, 42]} />
       <RangeCamera drawing={drawing} shotKey={shotKey} />
       <ambientLight intensity={0.9} />
       <directionalLight position={[3, 7, 4]} intensity={1.05} />

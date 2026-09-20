@@ -27,8 +27,6 @@ function Targets() {
 function Stage({ wands }: { wands: ReturnType<typeof wandsFromControllers> }) {
   return (
     <>
-      <color attach="background" args={["#f4f6fa"]} />
-      <fog attach="fog" args={["#f4f6fa", 12, 28]} />
       <PerspectiveCamera makeDefault position={[0, 1.6, 6.4]} fov={55} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={1.1} />

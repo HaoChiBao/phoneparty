@@ -13,8 +13,6 @@ const ACCENT = "#0057FF";
 function Stage({ children }: { children: ReactNode }) {
   return (
     <>
-      <color attach="background" args={["#c8dff0"]} />
-      <fog attach="fog" args={["#c8dff0", 16, 40]} />
       <PerspectiveCamera makeDefault position={[-0.6, 3.3, 12.2]} fov={48} />
       <hemisphereLight color="#eef4ff" groundColor="#6a8f4e" intensity={0.85} />
       <ambientLight intensity={0.35} />

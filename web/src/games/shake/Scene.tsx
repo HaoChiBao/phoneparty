@@ -16,8 +16,6 @@ function Stage({ span, children }: { span: number; children: ReactNode }) {
   const distance = 9.4 + span * 1.15;
   return (
     <>
-      <color attach="background" args={["#cfe7f2"]} />
-      <fog attach="fog" args={["#cfe7f2", 20, 52]} />
       <PerspectiveCamera makeDefault position={[0, 3.4, distance]} fov={46} />
       <ambientLight intensity={0.78} />
       <ShadowLight position={[6, 12, 8]} intensity={1.25} coverage={18} />

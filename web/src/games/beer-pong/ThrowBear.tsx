@@ -3,7 +3,9 @@
 import { useEffect, useRef } from "react";
 import type { TeamId } from "./layout";
 
-export const BEAR_THROW_MS = 1300;
+/** Video time when the ball leaves the paw. */
+export const THROW_AT = 0.27;
+const CLIP_MS = 1300;
 
 export function ThrowBear({
   team,
@@ -45,20 +47,36 @@ export function ThrowBear({
       video.currentTime = 0;
       return;
     }
-    if (clip !== "play") return;
-    released.current = false;
-    const finish = () => {
-      if (released.current) return;
-      released.current = true;
+    if (clip === "hold") {
       video.pause();
       if (Number.isFinite(video.duration) && video.duration > 0) {
         video.currentTime = Math.max(0, video.duration - 0.05);
       }
+      return;
+    }
+    if (clip !== "play") return;
+    released.current = false;
+    const release = () => {
+      if (released.current) return;
+      released.current = true;
       onReleasedRef.current();
     };
+    const freezeLast = () => {
+      release();
+      video.pause();
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.max(0, video.duration - 0.05);
+      }
+    };
+    const onTime = () => {
+      if (video.currentTime >= THROW_AT) release();
+    };
+    let throwAt = 0;
     const play = () => {
       const playing = video.play();
-      if (playing) playing.catch(() => finish());
+      if (playing) playing.catch(() => {});
+      window.clearTimeout(throwAt);
+      throwAt = window.setTimeout(release, THROW_AT * 1000);
     };
     const start = () => {
       if (video.currentTime > 0.01) {
@@ -69,14 +87,17 @@ export function ThrowBear({
       }
       play();
     };
-    video.addEventListener("ended", finish);
+    video.addEventListener("timeupdate", onTime);
+    video.addEventListener("ended", freezeLast);
     if (video.readyState >= 2) start();
     else video.addEventListener("loadeddata", start, { once: true });
-    const fallback = window.setTimeout(finish, BEAR_THROW_MS + 250);
+    const fallback = window.setTimeout(freezeLast, CLIP_MS + 250);
     return () => {
-      video.removeEventListener("ended", finish);
+      video.removeEventListener("timeupdate", onTime);
+      video.removeEventListener("ended", freezeLast);
       video.removeEventListener("loadeddata", start);
       video.removeEventListener("seeked", play);
+      window.clearTimeout(throwAt);
       window.clearTimeout(fallback);
     };
   }, [clip, playId]);
