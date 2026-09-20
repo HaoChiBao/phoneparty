@@ -15,6 +15,10 @@ export const PAW = {
   // It has to settle below this before another swipe can fire, so one jab is
   // one swipe. Not a cooldown: a fresh jab still counts immediately.
   resetAccel: 4.5,
+  // Cursor stabilization: enough damping for noisy gyros, while still able to
+  // cross the river in about a second.
+  smoothingSeconds: 0.12,
+  maxCursorUnitsPerSecond: 15,
 } as const;
 
 const quat = new THREE.Quaternion();
@@ -24,6 +28,47 @@ const dir = new THREE.Vector3();
 export type Paw = { x: number; y: number };
 
 export const MIDDLE: Paw = { x: 0, y: 0 };
+
+export function smoothPaw(previous: Paw, next: Paw, dt: number): Paw {
+  const step = Math.max(0, Math.min(dt, 0.1));
+  const alpha = 1 - Math.exp(-step / PAW.smoothingSeconds);
+  const maxDelta = PAW.maxCursorUnitsPerSecond * step;
+  const move = (from: number, to: number) =>
+    from + THREE.MathUtils.clamp(to - from, -maxDelta, maxDelta) * alpha;
+  return { x: move(previous.x, next.x), y: move(previous.y, next.y) };
+}
+
+/** The filtered paw is used for both the phone preview and catch coordinate. */
+export function useSmoothedPaw(paw: Paw, active: boolean, resetKey: unknown): Paw {
+  const [smoothed, setSmoothed] = useState<Paw>(paw);
+  const filtered = useRef(paw);
+  const lastAt = useRef(0);
+  const latestPaw = useRef(paw);
+
+  useEffect(() => {
+    latestPaw.current = paw;
+  }, [paw]);
+
+  useEffect(() => {
+    const next = latestPaw.current;
+    filtered.current = next;
+    lastAt.current = performance.now();
+    const frame = requestAnimationFrame(() => setSmoothed(next));
+    return () => cancelAnimationFrame(frame);
+  }, [active, resetKey]);
+
+  useEffect(() => {
+    if (!active) return;
+    const now = performance.now();
+    const dt = lastAt.current ? (now - lastAt.current) / 1000 : 1 / 60;
+    lastAt.current = now;
+    const next = smoothPaw(filtered.current, paw, dt);
+    filtered.current = next;
+    setSmoothed(next);
+  }, [paw, active]);
+
+  return active ? smoothed : paw;
+}
 
 /**
  * Where the back of the phone points, in river units. Local -Z is the back of

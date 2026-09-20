@@ -5,7 +5,13 @@ import type { GamePadProps } from "@/games/types";
 import type { CalibratedPose } from "@/lib/protocol";
 import { useServerClock } from "./clock";
 import { secondsLeft, useRoundState } from "./logic";
-import { PAW, pawFromSample, useSwipeDetector, type Paw } from "./pointer";
+import {
+  PAW,
+  pawFromSample,
+  useSmoothedPaw,
+  useSwipeDetector,
+  type Paw,
+} from "./pointer";
 import { FIELD, LEAD_IN_MS } from "./school";
 import { SwipeHint } from "./SwipeHint";
 
@@ -28,7 +34,8 @@ export function FishingPad({
   const accent = self?.color ?? "#0057FF";
 
   const zero = selfId ? round.zeroByPlayer[selfId] : undefined;
-  const paw = useMemo(() => pawFromSample(sample, zero ?? null), [sample, zero]);
+  const rawPaw = useMemo(() => pawFromSample(sample, zero ?? null), [sample, zero]);
+  const paw = useSmoothedPaw(rawPaw, Boolean(zero), zero);
   const pawRef = useRef<Paw>(paw);
 
   useEffect(() => {

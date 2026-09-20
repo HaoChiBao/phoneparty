@@ -16,6 +16,10 @@ export const AIM = {
   // A shaky moment costs this many times the time it would have gained.
   decay: 2.5,
   tickMs: 50,
+  // Smooth sensor noise without making deliberate aiming feel laggy.
+  smoothingSeconds: 0.11,
+  // Ignore one-frame sensor spikes while preserving a quick real adjustment.
+  maxCursorUnitsPerSecond: 9,
 } as const;
 
 export type Aim = { x: number; y: number; xDeg: number; yDeg: number };
@@ -30,6 +34,54 @@ const BEHIND = 4;
 const quat = new THREE.Quaternion();
 const scratch = new THREE.Quaternion();
 const dir = new THREE.Vector3();
+
+export function smoothAim(previous: Aim, next: Aim, dt: number): Aim {
+  const step = Math.max(0, Math.min(dt, 0.1));
+  const alpha = 1 - Math.exp(-step / AIM.smoothingSeconds);
+  const maxDelta = AIM.maxCursorUnitsPerSecond * step;
+  const move = (from: number, to: number) =>
+    from + THREE.MathUtils.clamp(to - from, -maxDelta, maxDelta) * alpha;
+  const x = move(previous.x, next.x);
+  const y = move(previous.y, next.y);
+  return {
+    x,
+    y,
+    xDeg: x * AIM.degreesToEdge,
+    yDeg: y * AIM.degreesToEdge,
+  };
+}
+
+/** Low-pass the phone's aim before it reaches a cursor or a scored arrow. */
+export function useSmoothedAim(aim: Aim, active: boolean, resetKey: unknown): Aim {
+  const [smoothed, setSmoothed] = useState<Aim>(aim);
+  const filtered = useRef(aim);
+  const lastAt = useRef(0);
+  const latestAim = useRef(aim);
+
+  useEffect(() => {
+    latestAim.current = aim;
+  }, [aim]);
+
+  useEffect(() => {
+    const next = latestAim.current;
+    filtered.current = next;
+    lastAt.current = performance.now();
+    const frame = requestAnimationFrame(() => setSmoothed(next));
+    return () => cancelAnimationFrame(frame);
+  }, [active, resetKey]);
+
+  useEffect(() => {
+    if (!active) return;
+    const now = performance.now();
+    const dt = lastAt.current ? (now - lastAt.current) / 1000 : 1 / 60;
+    lastAt.current = now;
+    const next = smoothAim(filtered.current, aim, dt);
+    filtered.current = next;
+    setSmoothed(next);
+  }, [aim, active]);
+
+  return active ? smoothed : aim;
+}
 
 /**
  * Where the BACK of the phone points, relative to the pose captured when the

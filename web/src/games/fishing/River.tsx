@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Player } from "@/lib/protocol";
-import { pawFromSample } from "./pointer";
+import { MIDDLE, pawFromSample, smoothPaw, type Paw } from "./pointer";
 import { FIELD, fishPosition, LEAD_IN_MS, type Fish } from "./school";
 import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 
@@ -164,10 +164,16 @@ function BearPaw({
 }) {
   const group = useRef<THREE.Group>(null);
   const toes = useMemo(() => [-0.19, -0.065, 0.065, 0.19], []);
+  const filtered = useRef<Paw>(MIDDLE);
 
-  useFrame(() => {
+  useEffect(() => {
+    filtered.current = MIDDLE;
+  }, [zero]);
+
+  useFrame((_, delta) => {
     if (!group.current) return;
-    const paw = pawFromSample(sample ?? null, zero);
+    const paw = smoothPaw(filtered.current, pawFromSample(sample ?? null, zero), delta);
+    filtered.current = paw;
     group.current.position.set(paw.x, paw.y, 1);
     // A swipe drives the paw into the water and it springs back.
     const since = nowAt() - swipeAt;

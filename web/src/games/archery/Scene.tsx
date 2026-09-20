@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { HostCanvas } from "@/games/shared/HostCanvas";
 import type { GameSceneProps } from "@/games/types";
-import { aimFromSample } from "./aim";
+import { aimFromSample, useSmoothedAim } from "./aim";
 import { BowBear, type BowClip } from "./BowBear";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
 import { RangeCamera } from "./RangeCamera";
@@ -74,10 +74,16 @@ export function ArcheryScene({
   // is the one the phone sends with the loose.
   const zero = current ? round.zeroByPlayer[current.id] : undefined;
   const sample = current ? gyroByPlayer[current.id] : undefined;
-  const liveAim = useMemo(
+  const rawLiveAim = useMemo(
     () => (zero && sample ? aimFromSample(sample, zero) : null),
     [zero, sample],
   );
+  const filteredLiveAim = useSmoothedAim(
+    rawLiveAim ?? { x: 0, y: 0, xDeg: 0, yDeg: 0 },
+    rawLiveAim !== null,
+    zero,
+  );
+  const liveAim = rawLiveAim ? filteredLiveAim : null;
   // Changes once per arrow, which is what tells the camera to hold in close
   // long enough to watch the shot land.
   const shotKey = round.lastShot

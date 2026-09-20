@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GamePadProps } from "@/games/types";
 import type { CalibratedPose } from "@/lib/protocol";
-import { AIM, aimFromSample, scoreFromAim, useSteadyHold, type Aim } from "./aim";
+import {
+  AIM,
+  aimFromSample,
+  scoreFromAim,
+  useSmoothedAim,
+  useSteadyHold,
+  type Aim,
+} from "./aim";
 import { AimHint } from "./AimHint";
 import { ARROWS_PER_PLAYER, totalFor, useRoundState } from "./logic";
 import { windLabel, type Wind } from "./wind";
@@ -45,7 +52,8 @@ export function ArcheryPad({
     draw.roundId === round.roundId &&
     draw.shotCount === myShots.length;
   const zero = drawn ? draw.pose : null;
-  const aim = useMemo(() => aimFromSample(sample, zero), [sample, zero]);
+  const rawAim = useMemo(() => aimFromSample(sample, zero), [sample, zero]);
+  const aim = useSmoothedAim(rawAim, drawn, zero);
   const aimRef = useRef<Aim>(aim);
 
   useEffect(() => {
