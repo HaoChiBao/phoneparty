@@ -68,8 +68,8 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
                 Waiting for a phone…
               </p>
               <p className="text-sm text-black/55">
-                Scan the QR, tap Enable motion, then swing the phone down like a
-                mallet.
+                Scan the QR, tap Enable motion, tap Ready, then swing when the
+                phone turns green.
               </p>
             </>
           ) : round.done ? (
@@ -104,8 +104,8 @@ export function HammerScene({ controllers, actionsByPlayer }: GameSceneProps) {
               <div className="flex items-center gap-4">
                 <SwingHint size={128} accent={activeColor} />
                 <p className="max-w-[16rem] text-left text-sm leading-5 text-black/60">
-                  Hold the phone flat with the camera facing the floor, keep it
-                  still, then swing straight down.
+                  Hold the phone like a mallet. When the phone is green, swing
+                  straight down.
                 </p>
               </div>
             </>
