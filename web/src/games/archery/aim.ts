@@ -8,7 +8,7 @@ import type { CalibratedPose, GyroSample } from "@/lib/protocol";
 /** Tunables for aiming. Retune here after a real-phone pass. */
 export const AIM = {
   // Tilt that moves the aim from the bullseye to the edge of the target face.
-  degreesToEdge: 10,
+  degreesToEdge: 2,
   // How long the shot must stay steady before the arrow looses.
   holdSeconds: 5,
   // Aim drift, in degrees per second, that still counts as steady.
@@ -19,7 +19,7 @@ export const AIM = {
   // Smooth sensor noise without making deliberate aiming feel laggy.
   smoothingSeconds: 0.11,
   // Ignore one-frame sensor spikes while preserving a quick real adjustment.
-  maxCursorUnitsPerSecond: 9,
+  maxCursorUnitsPerSecond: 45,
 } as const;
 
 export type Aim = { x: number; y: number; xDeg: number; yDeg: number };

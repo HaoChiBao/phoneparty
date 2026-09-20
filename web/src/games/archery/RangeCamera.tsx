@@ -4,14 +4,17 @@ import { PerspectiveCamera } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type * as THREE from "three";
+import { TARGET_Y } from "./Target";
 
-/** Eye line stays high so the lower target sits mid-frame when the camera pulls in. */
+/** Wide shot stays high; zoom drops to the bale. */
 const CAMERA_Y = 2.2;
+/** Nudge the zoomed frame left so the bale sits a little right of center. */
+const ZOOM_RIGHT = 0.32;
 
 /** Wide enough to read the whole lane; the target is a distant disc. */
-const OUT = { fov: 55, z: 6.5 };
+const OUT = { fov: 55, x: 0, y: CAMERA_Y, z: 6.5 };
 /** Down the sight, once the archer is drawing. */
-const IN = { fov: 24, z: 0.6 };
+const IN = { fov: 24, x: -ZOOM_RIGHT, y: TARGET_Y, z: 0.6 };
 /** How long the view holds in close after a release, to watch it land. */
 const WATCH_MS = 1500;
 
@@ -43,6 +46,8 @@ export function RangeCamera({
     const k = 1 - Math.pow(0.0016, delta);
     cam.aspect = state.size.width / Math.max(state.size.height, 1);
     cam.fov += (target.fov - cam.fov) * k;
+    cam.position.x += (target.x - cam.position.x) * k;
+    cam.position.y += (target.y - cam.position.y) * k;
     cam.position.z += (target.z - cam.position.z) * k;
     cam.updateProjectionMatrix();
   });
@@ -51,7 +56,7 @@ export function RangeCamera({
     <PerspectiveCamera
       ref={camera}
       makeDefault
-      position={[0, CAMERA_Y, OUT.z]}
+      position={[OUT.x, OUT.y, OUT.z]}
       fov={OUT.fov}
     />
   );
