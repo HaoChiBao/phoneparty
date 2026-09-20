@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 import { AIM } from "./aim";
 
-/** Video seconds spent drawing the bow. Release starts just after this. */
-export const CHARGE_END = 2.55;
+/** Last fully-drawn frame. The arrow leaves just after this (~3.00s). */
+export const CHARGE_END = 2.92;
 
 export type BowClip = "idle" | "charge" | "release" | "hold";
 
@@ -39,6 +39,7 @@ export function BowBear({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let raf = 0;
 
     if (clip === "idle") {
       released.current = false;
@@ -60,31 +61,37 @@ export function BowBear({
       released.current = false;
       const rate = CHARGE_END / AIM.holdSeconds;
       const pinDraw = () => {
+        cancelAnimationFrame(raf);
         video.pause();
         video.currentTime = CHARGE_END;
       };
-      const onTime = () => {
-        if (video.currentTime >= CHARGE_END) pinDraw();
+      const watch = () => {
+        if (video.currentTime >= CHARGE_END) {
+          pinDraw();
+          return;
+        }
+        raf = requestAnimationFrame(watch);
       };
       const play = () => {
         video.playbackRate = rate;
         const playing = video.play();
         if (playing) playing.catch(pinDraw);
+        watch();
       };
       const start = () => {
         video.pause();
-        video.currentTime = 0;
-        if (video.currentTime > 0.01) {
+        if (video.currentTime > 0.02) {
           video.addEventListener("seeked", play, { once: true });
+          video.currentTime = 0;
           return;
         }
+        video.currentTime = 0;
         play();
       };
-      video.addEventListener("timeupdate", onTime);
       if (video.readyState >= 2) start();
       else video.addEventListener("loadeddata", start, { once: true });
       return () => {
-        video.removeEventListener("timeupdate", onTime);
+        cancelAnimationFrame(raf);
         video.removeEventListener("loadeddata", start);
         video.removeEventListener("seeked", play);
       };
@@ -105,18 +112,19 @@ export function BowBear({
       if (playing) playing.catch(() => finish());
     };
     const startRelease = () => {
-      if (video.currentTime < CHARGE_END - 0.05) {
-        video.pause();
-        video.currentTime = CHARGE_END;
-        video.addEventListener("seeked", playRelease, { once: true });
+      // Already on the drawn frame: just play so the arrow leaves with the shot.
+      if (Math.abs(video.currentTime - CHARGE_END) < 0.08) {
+        playRelease();
         return;
       }
-      playRelease();
+      video.pause();
+      video.currentTime = CHARGE_END;
+      video.addEventListener("seeked", playRelease, { once: true });
     };
     video.addEventListener("ended", finish);
     if (video.readyState >= 2) startRelease();
     else video.addEventListener("loadeddata", startRelease, { once: true });
-    const fallback = window.setTimeout(finish, 2200);
+    const fallback = window.setTimeout(finish, 1800);
     return () => {
       video.removeEventListener("ended", finish);
       video.removeEventListener("loadeddata", startRelease);
